@@ -1,55 +1,145 @@
 import os
 import pandas as pd
 import joblib
+import time
+import datetime
+import logging
+import json
+import threading
+import traceback
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
 
-# Define directories
-daily_dir = r"C:\Users\ademz\Courses\AI and CyberSecurity\CICFlowMeter\target\data\daily"
-analyzed_dir = r"C:\Users\ademz\Courses\AI and CyberSecurity\CICFlowMeter\target\data\Analysed_Data"
-model_path = r"C:\Users\ademz\Courses\AI and CyberSecurity\ML\SVM_model.joblib"
+# Load configuration from JSON
+with open("C:/Users/ademz/Courses/AI and CyberSecurity/Back/config.json","r") as f:
+    config = json.load(f)
+
+daily_dir = config["daily_dir"]
+analyzed_dir = config["analyzed_dir"]
+model_path = config["model_path"]
 
 # Load the trained SVM model
 model = joblib.load(model_path)
 
-# Ensure the analyzed_data directory exists
+# Ensure the analyzed directory exists
 os.makedirs(analyzed_dir, exist_ok=True)
 
-# Columns to be removed from the feature set
+# Logging setup
+logging.basicConfig(filename="file_monitor.log", level=logging.INFO, format="%(asctime)s - %(message)s")
+
+# Columns to be removed
 columns_to_remove = ["Flow ID", "Src IP", "Src Port", "Dst IP", "Dst Port", "Protocol", "Timestamp", "Label"]
 
 # Encoding Mapping
 label_mapping = {0: "BENIGN", 1: "DDoS", 2: "DoS", 3: "PortScan"}
 
-# Process each CSV file in the daily directory
-for filename in os.listdir(daily_dir):
-    if filename.endswith(".csv"):
-        file_path = os.path.join(daily_dir, filename)
-        
-        # Load the CSV file into a DataFrame
-        df = pd.read_csv(file_path)
+# Track processed file sizes (by file name)
+last_processed_sizes = {}
 
-        # Remove the specified columns if they exist in the DataFrame
-        df_filtered = df.drop(columns=[col for col in columns_to_remove if col in df.columns], errors="ignore")
+def get_today_filename():
+    """Generate the current day's filename."""
+    today = datetime.datetime.now().strftime("%Y-%m-%d")
+    return f"{today}_Flow.csv"
 
-        # Ensure the remaining columns are used as features
+def process_new_lines(file_path):
+    """Process only new lines from the file and update the analyzed version."""
+    filename = os.path.basename(file_path)  # Get the file name
+    output_file_path = os.path.join(analyzed_dir, filename)
+
+    try:
+        # Get current file size
+        current_size = os.path.getsize(file_path)
+        last_size = last_processed_sizes.get(filename, 0)  # Use file name as the key
+
+        # If no new data, return
+        if current_size <= last_size:
+            return
+
+        skip_rows = 0
+        if os.path.exists(output_file_path):
+            df_analyzed = pd.read_csv(output_file_path)
+            skip_rows = df_analyzed.shape[0]
+        else:
+            df_analyzed = None
+
+        # Read only new rows
+        df_to_process = pd.read_csv(file_path, skiprows=range(1, skip_rows+1))
+
+        if df_to_process.empty:
+            return
+
+        # Remove unnecessary columns
+        df_filtered = df_to_process.drop(columns=[col for col in columns_to_remove], errors="ignore")
+
+        # Predict labels
         X = df_filtered.values
-
-        # Predict labels using the trained model
         y_pred = model.predict(X)
+        df_to_process["Label"] = [label_mapping.get(label, -1) for label in y_pred]
 
-        # Convert predicted labels to their encoded form
-        y_encoded = [label_mapping.get(label, -1) for label in y_pred]  # -1 for unknown labels
+        # Append processed data
+        df_updated = pd.concat([df_analyzed, df_to_process], ignore_index=True) if df_analyzed is not None else df_to_process
+        df_updated.to_csv(output_file_path, index=False)
 
-        # Add predictions to the DataFrame
-        df["Label"] = y_encoded
+        logging.info(f"Processed {df_to_process.shape[0]} new rows from {filename}")
 
-        # Save the updated DataFrame to the analyzed_data directory
-        output_file_path = os.path.join(analyzed_dir, filename)
-        df.to_csv(output_file_path, index=False)
+        # Update last processed size with the file name (not path)
+        last_processed_sizes[filename] = current_size
 
-        # Remove the analyzed file after processing
-        os.remove(file_path)
+    except Exception as e:
+        logging.error(f"Error processing {filename}: {e}")
+        traceback.print_exc()
 
-        print(f"Processed, saved, and deleted: {file_path}")
+class FlowFileHandler(FileSystemEventHandler):
+    """Handles new and modified CSV files in real-time."""
+    def on_modified(self, event):
+        if not event.is_directory and event.src_path.endswith('.csv'):
+            process_new_lines(event.src_path)
 
-print("✅ All files have been analyzed, saved, and removed successfully!")
+    def on_created(self, event):
+        if not event.is_directory and event.src_path.endswith('.csv'):
+            filename = os.path.basename(event.src_path)  # Get the file name
+            last_processed_sizes[filename] = 0  # Use file name as the key
+            process_new_lines(event.src_path)
 
+def monitor_today_file():
+    """Continuously monitor today's file in a separate thread."""
+    while not stop_event.is_set():
+        time.sleep(1)
+        today_file = get_today_filename()
+        today_path = os.path.join(daily_dir, today_file)
+        if os.path.exists(today_path):
+            process_new_lines(today_path)
+
+stop_event = threading.Event()
+
+def main():
+    # Process existing files first
+    for filename in os.listdir(daily_dir):
+        if filename.endswith(".csv"):
+            file_path = os.path.join(daily_dir, filename)
+            last_processed_sizes[filename] = 0  # Use file name as the key
+            process_new_lines(file_path)
+
+    # Start watchdog observer
+    event_handler = FlowFileHandler()
+    observer = Observer()
+    observer.schedule(event_handler, daily_dir, recursive=False)
+    observer.start()
+
+    # Start monitoring today’s file in a separate thread
+    monitor_thread = threading.Thread(target=monitor_today_file, daemon=True)
+    monitor_thread.start()
+
+    print("Monitoring started. Press Ctrl+C to stop.")
+    try:
+        while True:
+            time.sleep(1)
+    except KeyboardInterrupt:
+        print("Stopping monitoring...")
+        stop_event.set()
+        observer.stop()
+        monitor_thread.join()
+    observer.join()
+
+if __name__ == "__main__":
+    main()
