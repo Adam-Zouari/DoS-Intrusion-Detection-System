@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 # Load your CSV file
 df = pd.read_csv("C:/Users/ademz/Courses/AI&CyberSecurity/Data/TrafficLabelling/Combined2019")
@@ -58,14 +59,57 @@ def map_to_category(label):
 # Apply the mapping function to the 'Label' column
 df['ClassLabel'] = df['Label'].apply(map_to_category)
 
+# Drop rows with 'Unknown' class labels
+df = df[df['ClassLabel'] != 'Unknown']
+
+
+print(df["ClassLabel"].value_counts())
+
+
+for column in df.columns:
+    print(f"NaN values in {column}: {df[column].isna().sum()}")
+
+
+# Identify columns with inf values
+
+numeric_df = df.select_dtypes(include=[np.number])
+
+inf_columns = numeric_df.columns[np.isinf(numeric_df).any()].tolist()
+
+# Print result
+print("Columns containing infinity values:", inf_columns)
+
+
+# Check for inf values in the specific columns
+inf_counts = df[['Flow Bytes/s', 'Flow Packets/s']].applymap(np.isinf).sum()
+
+# Display the number of infinite values per column
+print("Number of infinite values in 'Flow Bytes/s' and 'Flow Packets/s':\n", inf_counts)
+
+df = df.replace([np.inf, -np.inf], np.nan)
+df = df.dropna()
+
+# Select the two problematic columns
+columns_to_check = ['Flow Bytes/s', 'Flow Packets/s']
+
+# Describe the two problematic columns
+description = df[columns_to_check].describe()
+
+# Display the description
+print("Description for 'Flow Bytes/s' and 'Flow Packets/s':\n", description)
+
+
+
+
+
+
 # Save the modified DataFrame to a new CSV file
-df.to_csv('cicddos0.csv', index=False)
+df.to_csv('clean_cicddos.csv', index=False)
 
 print("Class labels have been added successfully!")
 
 
-df = pd.read_csv('cicddos0.csv')
-print(df["ClassLabel"].value_counts())
+
 
 
 
