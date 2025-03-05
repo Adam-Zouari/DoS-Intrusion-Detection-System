@@ -9,9 +9,10 @@ import threading
 import traceback
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
+import numpy as np
 
 # Load configuration from JSON
-with open("C:/Users/ademz/Courses/AI and CyberSecurity/Back/config.json","r") as f:
+with open("C:/Users/ademz/Courses/AI and CyberSecurity/Back/config.json", "r") as f:
     config = json.load(f)
 
 daily_dir = config["daily_dir"]
@@ -41,6 +42,7 @@ def get_today_filename():
     today = datetime.datetime.now().strftime("%Y-%m-%d")
     return f"{today}_Flow.csv"
 
+
 def process_new_lines(file_path):
     """Process only new lines from the file and update the analyzed version."""
     filename = os.path.basename(file_path)  # Get the file name
@@ -62,14 +64,19 @@ def process_new_lines(file_path):
         else:
             df_analyzed = None
 
-        # Read only new rows
+        # Read only new rows with 'Flow Bytes/s' and 'Flow Packets/s' as strings
         df_to_process = pd.read_csv(file_path, skiprows=range(1, skip_rows+1))
+
+        # Handle missing values in the dataset (NaN)
+        df_to_process = df_to_process.replace([np.inf, -np.inf], np.nan)
+        df_to_process = df_to_process.dropna()
 
         if df_to_process.empty:
             return
 
         # Remove unnecessary columns
         df_filtered = df_to_process.drop(columns=[col for col in columns_to_remove], errors="ignore")
+
 
         # Predict labels
         X = df_filtered.values
