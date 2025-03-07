@@ -1,0 +1,319 @@
+import React, { useMemo, useState } from 'react';
+import { FlowData, AttackStats, AttackType } from '../../types/flowData';
+import { processAnomalies } from '../../services/dataService';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import './AnomalyDetection.css';
+
+interface AnomalyDetectionProps {
+  data: FlowData[];
+}
+
+const COLORS = {
+  low: '#4caf50',
+  medium: '#ff9800',
+  high: '#f44336'
+};
+
+const ATTACK_COLORS = {
+  'BENIGN': '#4caf50',
+  'DDOS': '#f44336',
+  'DOS': '#ff9800',
+  'PORT SCAN': '#9c27b0'
+};
+
+const ATTACK_DESCRIPTIONS = {
+  'BENIGN': 'Normal network traffic with no malicious intent detected.',
+  'DDOS': 'Distributed Denial of Service attack attempting to disrupt normal traffic by overwhelming targets with a flood of traffic.',
+  'DOS': 'Denial of Service attack attempting to make a service unavailable by flooding it with traffic.',
+  'PORT SCAN': 'Reconnaissance technique that determines which ports on a network are open by systematically scanning for listening services.'
+};
+
+const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
+  const attacks = useMemo(() => processAnomalies(data), [data]);
+  const [selectedAttack, setSelectedAttack] = useState<AttackType | null>(null);
+  
+  const attacksWithoutBenign = useMemo(() => {
+    return attacks.filter(attack => attack.attackType !== 'BENIGN');
+  }, [attacks]);
+  
+  const benignStats = useMemo(() => {
+    return attacks.find(attack => attack.attackType === 'BENIGN');
+  }, [attacks]);
+  
+  const selectedAttackDetails = useMemo(() => {
+    return attacks.find(attack => attack.attackType === selectedAttack);
+  }, [attacks, selectedAttack]);
+  
+  // Get suspicious flag patterns (high SYN counts without corresponding ACK can indicate scanning)
+  const suspiciousPatterns = useMemo(() => {
+    const patterns: {
+      ip: string;
+      pattern: string;
+      synCount?: number;
+      ackCount?: number;
+      ratio?: string;
+      severity: 'low' | 'medium' | 'high';
+      rstCount?: number;
+      packetsPerSec?: string;
+    }[] = [];
+    
+    // Group flows by source IP
+    const hostFlows = new Map<string, FlowData[]>();
+    
+    data.forEach(flow => {
+      const srcIP = flow['Src IP'];
+      if (!hostFlows.has(srcIP)) {
+        hostFlows.set(srcIP, []);
+      }
+      hostFlows.get(srcIP)!.push(flow);
+    });
+    
+    // Check for suspicious patterns
+    hostFlows.forEach((flows, ip) => {
+      // SYN scan pattern: many SYNs, few ACKs
+      const totalSYN = flows.reduce((sum, flow) => sum + (flow['SYN Flag Count'] || 0), 0);
+      const totalACK = flows.reduce((sum, flow) => sum + (flow['ACK Flag Count'] || 0), 0);
+      
+      if (totalSYN > 20 && totalSYN > totalACK * 3) {
+        patterns.push({
+          ip,
+          pattern: 'SYN Scan',
+          synCount: totalSYN,
+          ackCount: totalACK,
+          ratio: totalACK > 0 ? (totalSYN / totalACK).toFixed(2) : 'N/A',
+          severity: 'high'
+        });
+      }
+      
+      // RST flood pattern: many RSTs
+      const totalRST = flows.reduce((sum, flow) => sum + (flow['RST Flag Count'] || 0), 0);
+      if (totalRST > 30) {
+        patterns.push({
+          ip,
+          pattern: 'RST Flood',
+          rstCount: totalRST,
+          severity: totalRST > 100 ? 'high' : 'medium'
+        });
+      }
+      
+      // High flow rate pattern
+      const flowRate = flows.reduce((sum, flow) => sum + (flow['Flow Packets/s'] || 0), 0);
+      if (flowRate > 1000) {
+        patterns.push({
+          ip,
+          pattern: 'High Flow Rate',
+          packetsPerSec: flowRate.toFixed(2),
+          severity: flowRate > 10000 ? 'high' : 'medium'
+        });
+      }
+    });
+    
+    return patterns;
+  }, [data]);
+  
+  // For pie chart visualization
+  const attackDistribution = useMemo(() => {
+    return attacks.map(attack => ({
+      name: attack.attackType,
+      value: attack.count,
+      color: ATTACK_COLORS[attack.attackType] || '#999'
+    }));
+  }, [attacks]);
+  
+  return (
+    <div className="anomaly-detection">
+      <h2>Anomaly Detection & Alerts</h2>
+      
+      <div className="anomaly-overview">
+        <div className="anomaly-cards">
+          <div className={`anomaly-card ${attacksWithoutBenign.length > 0 ? 'alert' : 'safe'}`}>
+            <h3>Attack Status</h3>
+            <p className="anomaly-value">
+              {attacksWithoutBenign.length > 0 
+                ? `${attacksWithoutBenign.reduce((sum, a) => sum + a.count, 0)} Attacks Detected` 
+                : 'No Attacks Detected'}
+            </p>
+            <p className="anomaly-label">
+              {attacksWithoutBenign.length > 0 
+                ? `${attacksWithoutBenign.length} different attack types` 
+                : 'Network appears secure'}
+            </p>
+          </div>
+          
+          <div className={`anomaly-card ${suspiciousPatterns.length > 0 ? 'alert' : 'safe'}`}>
+            <h3>Suspicious Patterns</h3>
+            <p className="anomaly-value">{suspiciousPatterns.length}</p>
+            <p className="anomaly-label">
+              {suspiciousPatterns.length > 0 
+                ? 'Suspicious traffic patterns detected' 
+                : 'No suspicious patterns'}
+            </p>
+          </div>
+          
+          <div className="anomaly-card">
+            <h3>Benign Traffic</h3>
+            <p className="anomaly-value">{benignStats?.count.toLocaleString() || 0}</p>
+            <p className="anomaly-label">Normal connections</p>
+          </div>
+          
+          <div className="anomaly-card">
+            <h3>Affected IPs</h3>
+            <p className="anomaly-value">
+              {new Set(attacks.flatMap(a => a.relatedIPs)).size}
+            </p>
+            <p className="anomaly-label">Unique IP addresses</p>
+          </div>
+        </div>
+        
+        <div className="chart-container">
+          <h3>Attack Distribution</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={attackDistribution}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                outerRadius={120}
+                dataKey="value"
+                nameKey="name"
+                label={({ name, percent }) => 
+                  percent > 0.05 ? `${name}: ${(percent * 100).toFixed(1)}%` : ''
+                }
+              >
+                {attackDistribution.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.color} 
+                    onClick={() => setSelectedAttack(entry.name as AttackType)}
+                    style={{ cursor: 'pointer' }}
+                  />
+                ))}
+              </Pie>
+              <Tooltip 
+                formatter={(value) => [`${value} connections`, undefined]}
+              />
+              <Legend onClick={(data) => setSelectedAttack((data.payload as unknown as { name: string }).name as AttackType)} />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      
+      {selectedAttackDetails && (
+        <div className="attack-details">
+          <h3>
+            {selectedAttackDetails.attackType} Details
+            <span className={`severity-badge ${selectedAttackDetails.severity}`}>
+              {selectedAttackDetails.severity.toUpperCase()}
+            </span>
+          </h3>
+          
+          <p className="attack-description">
+            {ATTACK_DESCRIPTIONS[selectedAttackDetails.attackType]}
+          </p>
+          
+          <div className="attack-stats">
+            <div className="attack-stat-item">
+              <span className="stat-label">Total Connections</span>
+              <span className="stat-value">{selectedAttackDetails.count.toLocaleString()}</span>
+            </div>
+            
+            <div className="attack-stat-item">
+              <span className="stat-label">Related IPs</span>
+              <span className="stat-value">{selectedAttackDetails.relatedIPs.length.toLocaleString()}</span>
+            </div>
+          </div>
+          
+          {selectedAttackDetails.relatedIPs.length > 0 && (
+            <div className="related-ips">
+              <h4>Related IP Addresses</h4>
+              <div className="ip-tags">
+                {selectedAttackDetails.relatedIPs.slice(0, 50).map((ip, index) => (
+                  <span key={index} className="ip-tag">{ip}</span>
+                ))}
+                {selectedAttackDetails.relatedIPs.length > 50 && (
+                  <span className="ip-tag more">
+                    +{selectedAttackDetails.relatedIPs.length - 50} more
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+      
+      <div className="suspicious-patterns">
+        <h3>Suspicious Traffic Patterns</h3>
+        {suspiciousPatterns.length > 0 ? (
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Source IP</th>
+                  <th>Suspicious Pattern</th>
+                  <th>Details</th>
+                  <th>Severity</th>
+                </tr>
+              </thead>
+              <tbody>
+                {suspiciousPatterns.map((pattern, index) => (
+                  <tr key={index}>
+                    <td>{pattern.ip}</td>
+                    <td>{pattern.pattern}</td>
+                    <td>
+                      {pattern.pattern === 'SYN Scan' && (
+                        <span>SYN: {pattern.synCount}, ACK: {pattern.ackCount}, Ratio: {pattern.ratio}</span>
+                      )}
+                      {pattern.pattern === 'RST Flood' && (
+                        <span>RST Count: {pattern.rstCount}</span>
+                      )}
+                      {pattern.pattern === 'High Flow Rate' && (
+                        <span>{pattern.packetsPerSec} packets/sec</span>
+                      )}
+                    </td>
+                    <td>
+                      <span className={`severity-badge ${pattern.severity}`}>
+                        {pattern.severity.toUpperCase()}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="no-patterns">
+            <p>No suspicious traffic patterns detected in the current dataset.</p>
+          </div>
+        )}
+      </div>
+      
+      <div className="attack-visualization">
+        <h3>Attack Volume by Type</h3>
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart
+            data={attacks}
+            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+          >
+            <CartesianGrid strokeDasharray="3 3" />
+            <XAxis dataKey="attackType" />
+            <YAxis />
+            <Tooltip formatter={(value) => [`${value} connections`, undefined]} />
+            <Legend />
+            <Bar 
+              dataKey="count" 
+              name="Connection Count" 
+              onClick={(data) => setSelectedAttack(data.attackType)}
+            >
+              {attacks.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={ATTACK_COLORS[entry.attackType] || '#999'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+export default AnomalyDetection;

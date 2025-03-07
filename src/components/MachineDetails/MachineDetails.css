@@ -1,0 +1,180 @@
+.machine-details {
+  padding: 1rem 0;
+}
+
+.machine-details h2 {
+  margin-top: 0;
+  color: #1a237e;
+  border-bottom: 2px solid #e0e0e0;
+  padding-bottom: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.hosts-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+@media (min-width: 1200px) {
+  .hosts-container {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.hosts-table, .host-details {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.hosts-table h3, .host-details h3 {
+  margin-top: 0;
+  color: #555;
+  font-weight: 500;
+  margin-bottom: 1rem;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+.hosts-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.hosts-table th,
+.hosts-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.hosts-table th {
+  background-color: #f5f5f5;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hosts-table th:hover {
+  background-color: #e0e0e0;
+}
+
+.hosts-table tbody tr {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.hosts-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.selected-row {
+  background-color: #e8eaf6 !important;
+}
+
+.view-details-btn {
+  background-color: #1a237e;
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  transition: background-color 0.2s;
+}
+
+.view-details-btn:hover {
+  background-color: #303f9f;
+}
+
+.detail-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.detail-card {
+  background-color: #f5f5f5;
+  border-radius: 6px;
+  padding: 1rem;
+}
+
+.detail-card h4 {
+  margin-top: 0;
+  color: #1a237e;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.detail-card ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.detail-card li {
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.common-destinations {
+  margin-bottom: 1.5rem;
+}
+
+.common-destinations h4 {
+  color: #1a237e;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.common-destinations ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.common-destinations li {
+  padding: 0.5rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: space-between;
+}
+
+.destination-ip {
+  font-weight: 500;
+}
+
+.destination-count {
+  color: #666;
+}
+
+.flag-chart {
+  margin-top: 1.5rem;
+}
+
+.flag-chart h4 {
+  color: #1a237e;
+  font-size: 1rem;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.active-hosts-visualization {
+  background-color: white;
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.active-hosts-visualization h3 {
+  margin-top: 0;
+  color: #555;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  text-align: center;
+}
