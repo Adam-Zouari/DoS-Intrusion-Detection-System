@@ -1,5 +1,5 @@
 export interface FlowData {
-  id: string;
+  'Flow ID': string;  // Changed from id
   timestamp: string;
   sourceIP: string;
   destinationIP: string;
@@ -14,6 +14,9 @@ export interface FlowData {
   'Timestamp'?: string;
   'Src IP'?: string;
   'Dst IP'?: string;
+  'Src Port'?: number;  // Added Src Port
+  'Dst Port'?: number;  // Added Dst Port
+  'Flow Duration': number;  // Changed from optional to required
   'Total Length of Fwd Packet'?: number;
   'Total Fwd Packet'?: number;
   'Total Length of Bwd Packet'?: number;

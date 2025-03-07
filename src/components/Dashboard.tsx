@@ -71,7 +71,7 @@ const Dashboard: React.FC = () => {
             </thead>
             <tbody>
               {flowData.map(flow => (
-                <tr key={flow.id} className={flow.attackType ? `severity-${flow.severity}` : ''}>
+                <tr key={flow['Flow ID']} className={flow.attackType ? `severity-${flow.severity}` : ''}>
                   <td>{new Date(flow.timestamp).toLocaleTimeString()}</td>
                   <td>{flow.sourceIP}</td>
                   <td>{flow.destinationIP}</td>

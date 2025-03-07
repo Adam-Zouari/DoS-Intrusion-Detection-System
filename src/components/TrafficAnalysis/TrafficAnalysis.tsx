@@ -44,10 +44,10 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
         protocol: typeof flow['Protocol'] === 'number' 
           ? {1: 'ICMP', 6: 'TCP', 17: 'UDP'}[flow['Protocol']] || 'OTHER' 
           : flow['Protocol'],
-        bytesPerSec: flow['Flow Bytes/s'],
-        packetsPerSec: flow['Flow Packets/s'],
-        duration: flow['Flow Duration'],
-        timestamp: flow['Timestamp']
+        bytesPerSec: flow['Flow Bytes/s'] || 0,
+        packetsPerSec: flow['Flow Packets/s'] || 0,
+        duration: flow['Flow Duration'] || 0,
+        timestamp: flow['Timestamp'] || new Date().toISOString()
       }));
   }, [data, liveUpdateCounter]); // Re-compute when liveUpdateCounter changes
   
@@ -85,7 +85,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
     return trafficTrendData
       .filter(point => point.bytes > meanBytes + 2 * stdDevBytes)
       .map(point => ({
-        timestamp: point.timestamp,
+        timestamp: point.timestamp || new Date().toISOString(),
         bytes: point.bytes,
         percentAboveMean: Math.round(((point.bytes - meanBytes) / meanBytes) * 100)
       }));
