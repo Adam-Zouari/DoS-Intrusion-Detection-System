@@ -1,7 +1,11 @@
 import { FlowData, ProtocolDistribution, HostStats, AttackStats } from '../types/flowData';
 import Papa from 'papaparse';
 
-const DATA_PATH = 'C:\\Users\\ademz\\Courses\\AI and CyberSecurity\\CICFlowMeter\\target\\data\\Analysed_Data';
+// Re-export the types so they can be imported from this module
+export type { FlowData, ProtocolDistribution, HostStats, AttackStats };
+
+// Use the server API endpoint instead of direct file access
+const API_BASE_URL = 'http://localhost:5000/api';
 
 // Get current date in yyyy-mm-dd format
 const getCurrentDateString = (): string => {
@@ -16,37 +20,19 @@ const protocolMap: { [key: number]: string } = {
   17: 'UDP'
 };
 
-export const fetchFlowData = async (): Promise<FlowData[]> => {
+export const fetchFlowData = async (date?: string): Promise<FlowData[]> => {
   try {
-    const date = getCurrentDateString();
-    const filePath = `${DATA_PATH}\\${date}_Flow.csv`;
+    const dateToFetch = date || getCurrentDateString();
+    const url = `${API_BASE_URL}/flow-data?date=${dateToFetch}`;
     
-    // In a web context, we'd use fetch. Since we're reading a local file,
-    // we'll use the node fs module (in a real app, this would need adjustment based on your setup)
-    // For now, we'll simulate this by returning a promise
+    const response = await fetch(url);
     
-    // In a real implementation, you'd read the file and parse it
-    // For now, we're mocking the implementation
+    if (!response.ok) {
+      throw new Error(`HTTP error! Status: ${response.status}`);
+    }
     
-    // Placeholder for testing in browser - replace with actual implementation
-    // This is where you'd use fs in Node or fetch in a server context
-    return new Promise((resolve) => {
-      // Simulating file read delay
-      setTimeout(() => {
-        // You would replace this with actual file reading logic
-        fetch(filePath)
-          .then(response => response.text())
-          .then(csvText => {
-            const parsed = Papa.parse(csvText, { header: true, dynamicTyping: true });
-            resolve(parsed.data as FlowData[]);
-          })
-          .catch(error => {
-            console.error('Error reading file:', error);
-            // Return mock data for testing
-            resolve([]);
-          });
-      }, 500);
-    });
+    const data = await response.json();
+    return data as FlowData[];
   } catch (error) {
     console.error('Error fetching flow data:', error);
     return [];
@@ -124,40 +110,46 @@ export const processHostDetails = (data: FlowData[]): HostStats[] => {
     const srcIP = flow['Src IP'];
     const dstIP = flow['Dst IP'];
     
-    // Process source host
-    if (!hostMap.has(srcIP)) {
-      hostMap.set(srcIP, createEmptyHostStats(srcIP));
+    if (srcIP) {
+      // Process source host
+      if (!hostMap.has(srcIP)) {
+        hostMap.set(srcIP, createEmptyHostStats(srcIP));
+      }
+      
+      const srcHost = hostMap.get(srcIP)!;
+      srcHost.connectionsInitiated++;
+      srcHost.dataSent += flow['Total Length of Fwd Packet'] || 0;
+      srcHost.packetsSent += flow['Total Fwd Packet'] || 0;
+      
+      // Track common destinations
+      if (dstIP) {
+        const dstIndex = srcHost.commonDestinations.findIndex(d => d.ip === dstIP);
+        if (dstIndex >= 0) {
+          srcHost.commonDestinations[dstIndex].count++;
+        } else {
+          srcHost.commonDestinations.push({ ip: dstIP, count: 1 });
+        }
+      }
+      
+      // Process flags
+      processFlags(srcHost, flow);
+      
+      // Process active/idle times
+      srcHost.activeMean = (srcHost.activeMean + (flow['Active Mean'] || 0)) / 2;
+      srcHost.idleMean = (srcHost.idleMean + (flow['Idle Mean'] || 0)) / 2;
     }
     
-    const srcHost = hostMap.get(srcIP)!;
-    srcHost.connectionsInitiated++;
-    srcHost.dataSent += flow['Total Length of Fwd Packet'] || 0;
-    srcHost.packetsSent += flow['Total Fwd Packet'] || 0;
-    
-    // Track common destinations
-    const dstIndex = srcHost.commonDestinations.findIndex(d => d.ip === dstIP);
-    if (dstIndex >= 0) {
-      srcHost.commonDestinations[dstIndex].count++;
-    } else {
-      srcHost.commonDestinations.push({ ip: dstIP, count: 1 });
+    if (dstIP) {
+      // Process destination host
+      if (!hostMap.has(dstIP)) {
+        hostMap.set(dstIP, createEmptyHostStats(dstIP));
+      }
+      
+      const dstHost = hostMap.get(dstIP)!;
+      dstHost.connectionsReceived++;
+      dstHost.dataReceived += flow['Total Length of Bwd Packet'] || 0;
+      dstHost.packetsReceived += flow['Total Bwd packets'] || 0;
     }
-    
-    // Process flags
-    processFlags(srcHost, flow);
-    
-    // Process active/idle times
-    srcHost.activeMean = (srcHost.activeMean + (flow['Active Mean'] || 0)) / 2;
-    srcHost.idleMean = (srcHost.idleMean + (flow['Idle Mean'] || 0)) / 2;
-    
-    // Process destination host
-    if (!hostMap.has(dstIP)) {
-      hostMap.set(dstIP, createEmptyHostStats(dstIP));
-    }
-    
-    const dstHost = hostMap.get(dstIP)!;
-    dstHost.connectionsReceived++;
-    dstHost.dataReceived += flow['Total Length of Bwd Packet'] || 0;
-    dstHost.packetsReceived += flow['Total Bwd packets'] || 0;
   });
   
   // Sort common destinations and convert Map to Array

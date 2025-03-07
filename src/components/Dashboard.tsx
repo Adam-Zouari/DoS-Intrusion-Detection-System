@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFlowData, FlowData } from '../services/dataService';
+import { fetchFlowData } from '../services/dataService';
+import { FlowData } from '../types/flowData';
 import { format } from 'date-fns';
 
 const Dashboard: React.FC = () => {

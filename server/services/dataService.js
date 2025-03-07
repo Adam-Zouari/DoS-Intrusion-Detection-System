@@ -297,8 +297,51 @@ const createEmptyAnomalyDetection = () => {
   };
 };
 
+const getFlowData = async (date) => {
+  // Check if we have cached this data
+  if (cachedData[date]) {
+    return cachedData[date];
+  }
+  
+  return new Promise((resolve, reject) => {
+    const filePath = path.join(config.DATA_DIRECTORY, `${date}_Flow.csv`);
+    const results = [];
+    
+    // Check if file exists
+    if (!fs.existsSync(filePath)) {
+      console.log(`File not found: ${filePath}`);
+      resolve([]);
+      return;
+    }
+    
+    fs.createReadStream(filePath)
+      .pipe(csv())
+      .on('data', (data) => results.push(data))
+      .on('end', () => {
+        // Process data to ensure numeric values
+        const processedData = results.map(item => {
+          const processed = {};
+          for (const key in item) {
+            const value = item[key];
+            processed[key] = !isNaN(value) && value !== '' ? Number(value) : value;
+          }
+          return processed;
+        });
+        
+        // Cache the results
+        cachedData[date] = processedData;
+        resolve(processedData);
+      })
+      .on('error', (error) => {
+        console.error(`Error reading CSV: ${error.message}`);
+        reject(error);
+      });
+  });
+};
+
 module.exports = {
   initializeDataService,
   getInitialData,
-  getLatestData
+  getLatestData,
+  getFlowData
 };
