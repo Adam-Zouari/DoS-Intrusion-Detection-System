@@ -28,13 +28,13 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
     return () => clearInterval(timer);
   }, []);
   
-  // Top active connections by bytes transferred
+  // Top active connections by packets transferred
   const topActiveConnections = useMemo(() => {
     return [...data]
       .sort((a, b) => {
-        const bytesA = (a['Flow Bytes/s'] || 0);
-        const bytesB = (b['Flow Bytes/s'] || 0);
-        return bytesB - bytesA;
+        const packetsA = (a['Flow Packets/s'] || 0);
+        const packetsB = (b['Flow Packets/s'] || 0);
+        return packetsB - packetsA;
       })
       .slice(0, 10)
       .map(flow => ({
@@ -42,7 +42,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
         source: `${flow['Src IP']}:${flow['Src Port']}`,
         destination: `${flow['Dst IP']}:${flow['Dst Port']}`,
         protocol: typeof flow['Protocol'] === 'number' 
-          ? {1: 'ICMP', 6: 'TCP', 17: 'UDP'}[flow['Protocol']] || 'OTHER' 
+          ? {0: 'HOPOPT', 1: 'ICMP', 6: 'TCP', 17: 'UDP'}[flow['Protocol']] || 'OTHER' 
           : flow['Protocol'],
         bytesPerSec: flow['Flow Bytes/s'] || 0,
         packetsPerSec: flow['Flow Packets/s'] || 0,
@@ -61,10 +61,19 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
       const totalBytes = flowsAtTimestamp.reduce((sum, flow) => sum + (flow['Flow Bytes/s'] || 0), 0);
       const totalPackets = flowsAtTimestamp.reduce((sum, flow) => sum + (flow['Flow Packets/s'] || 0), 0);
       
+      // Find the flow ID with the highest bytes/s at this timestamp
+      const topFlow = flowsAtTimestamp.length > 0 
+        ? flowsAtTimestamp.reduce((prev, current) => 
+            (prev['Flow Bytes/s'] || 0) > (current['Flow Bytes/s'] || 0) ? prev : current)
+        : null;
+      
+      const topFlowId = topFlow ? topFlow['Flow ID'] : 'N/A';
+      
       return {
         timestamp,
         bytes: totalBytes,
         packets: totalPackets,
+        topFlowId,
       };
     });
   }, [data]);
@@ -73,21 +82,21 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
   const trafficSpikes = useMemo(() => {
     if (trafficTrendData.length < 2) return [];
     
-    // Calculate mean bytes per second
-    const meanBytes = trafficTrendData.reduce((sum, point) => sum + point.bytes, 0) / trafficTrendData.length;
+    // Calculate mean packets per second
+    const meanPackets = trafficTrendData.reduce((sum, point) => sum + point.packets, 0) / trafficTrendData.length;
     
     // Standard deviation
-    const stdDevBytes = Math.sqrt(
-      trafficTrendData.reduce((sum, point) => sum + Math.pow(point.bytes - meanBytes, 2), 0) / trafficTrendData.length
+    const stdDevPackets = Math.sqrt(
+      trafficTrendData.reduce((sum, point) => sum + Math.pow(point.packets - meanPackets, 2), 0) / trafficTrendData.length
     );
     
     // Find points that are more than 2 standard deviations above mean
     return trafficTrendData
-      .filter(point => point.bytes > meanBytes + 2 * stdDevBytes)
+      .filter(point => point.packets > meanPackets + 2 * stdDevPackets)
       .map(point => ({
         timestamp: point.timestamp || new Date().toISOString(),
-        bytes: point.bytes,
-        percentAboveMean: Math.round(((point.bytes - meanBytes) / meanBytes) * 100)
+        packets: point.packets,
+        percentAboveMean: Math.round(((point.packets - meanPackets) / meanPackets) * 100)
       }));
   }, [trafficTrendData]);
   
@@ -109,19 +118,39 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
             />
             <YAxis />
             <Tooltip 
-              labelFormatter={formatTimestamp}
-              formatter={(value) => [`${Number(value).toLocaleString()}`, undefined]}
+              content={({ active, payload, label }) => {
+                if (active && payload && payload.length) {
+                  const flowId = payload[0]?.payload?.topFlowId || 'N/A';
+                  return (
+                    <div className="custom-tooltip" style={{ 
+                      backgroundColor: 'white', 
+                      padding: '10px', 
+                      border: '1px solid #ccc',
+                      borderRadius: '4px'
+                    }}>
+                      <p className="tooltip-time" style={{ margin: '5px 0' }}>{formatTimestamp(label)}</p>
+                      <p className="tooltip-flow" style={{ margin: '5px 0' }}>Flow ID: {flowId}</p>
+                      {payload.map((entry, index) => (
+                        <p key={index} style={{ color: entry.color, margin: '5px 0' }}>
+                          {entry.name === 'bytes' ? 'Bytes/s' : 'Packets/s'}: {Number(entry.value).toLocaleString()}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              }}
             />
             <Legend />
-            <Area type="monotone" dataKey="bytes" name="Bytes/s" stroke="#8884d8" fill="#8884d8" fillOpacity={0.3} />
-            <Area type="monotone" dataKey="packets" name="Packets/s" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.3} />
+            <Area type="monotone" dataKey="bytes" name="bytes" stroke="#8884d8" fill="#8884d8" fillOpacity={0.3} />
+            <Area type="monotone" dataKey="packets" name="packets" stroke="#82ca9d" fill="#82ca9d" fillOpacity={0.3} />
           </AreaChart>
         </ResponsiveContainer>
       </div>
       
       <div className="traffic-panels">
         <div className="traffic-panel">
-          <h3>Top Active Connections</h3>
+          <h3>Top Active Flows</h3>
           <div className="table-container">
             <table>
               <thead>
@@ -129,7 +158,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
                   <th>Source</th>
                   <th>Destination</th>
                   <th>Protocol</th>
-                  <th>Bytes/s</th>
+                  <th>Packets/s</th>
                   <th>Duration</th>
                   <th>Time</th>
                 </tr>
@@ -140,7 +169,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
                     <td>{conn.source}</td>
                     <td>{conn.destination}</td>
                     <td>{conn.protocol}</td>
-                    <td>{Math.round(conn.bytesPerSec).toLocaleString()}</td>
+                    <td>{Math.round(conn.packetsPerSec).toLocaleString()}</td>
                     <td>{Math.round(conn.duration).toLocaleString()} ms</td>
                     <td>{formatTimestamp(conn.timestamp)}</td>
                   </tr>
@@ -163,7 +192,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
                 <thead>
                   <tr>
                     <th>Time</th>
-                    <th>Bytes/s</th>
+                    <th>Packets/s</th>
                     <th>% Above Avg</th>
                   </tr>
                 </thead>
@@ -171,7 +200,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
                   {trafficSpikes.map((spike, index) => (
                     <tr key={index} className="spike-row">
                       <td>{formatTimestamp(spike.timestamp)}</td>
-                      <td>{Math.round(spike.bytes).toLocaleString()}</td>
+                      <td>{Math.round(spike.packets).toLocaleString()}</td>
                       <td>+{spike.percentAboveMean}%</td>
                     </tr>
                   ))}
@@ -196,18 +225,62 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
               .map((flow, index) => ({
                 index,
                 duration: flow['Flow Duration'],
-                bytes: flow['Flow Bytes/s']
+                bytes: flow['Flow Bytes/s'],
+                packets: flow['Flow Packets/s'],
+                flowId: flow['Flow ID'] // Add Flow ID to the data points
               }))}
-            margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+            margin={{ top: 5, right: 40, left: 40, bottom: 5 }} // Increased left and right margins
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="index" label={{ value: 'Flow Index', position: 'insideBottomRight', offset: -10 }} />
-            <YAxis yAxisId="left" label={{ value: 'Duration (ms)', angle: -90, position: 'insideLeft' }} />
-            <YAxis yAxisId="right" orientation="right" label={{ value: 'Bytes/s', angle: 90, position: 'insideRight' }} />
-            <Tooltip />
+            <YAxis 
+              yAxisId="left" 
+              label={{ 
+                value: 'Duration (ms)', 
+                angle: -90, 
+                position: 'insideLeft',
+                style: { textAnchor: 'middle' },
+                dx: -35  // Use dx instead of offset for horizontal positioning
+              }} 
+            />
+            <YAxis 
+              yAxisId="right" 
+              orientation="right" 
+              label={{ 
+                value: 'Bytes/s', 
+                angle: 90, 
+                position: 'insideRight',
+                style: { textAnchor: 'middle' },
+                dx: 35  // Use dx instead of offset for horizontal positioning
+              }} 
+            />
+            <Tooltip 
+              content={({ active, payload }) => {
+                if (active && payload && payload.length) {
+                  const flowId = payload[0]?.payload?.flowId || 'N/A';
+                  return (
+                    <div className="custom-tooltip" style={{ 
+                      backgroundColor: 'white', 
+                      padding: '10px', 
+                      border: '1px solid #ccc',
+                      borderRadius: '4px'
+                    }}>
+                      <p className="tooltip-flow" style={{ margin: '5px 0' }}>Flow ID: {flowId}</p>
+                      {payload.map((entry, index) => (
+                        <p key={index} style={{ color: entry.color, margin: '5px 0' }}>
+                          {entry.name}: {Number(entry.value).toLocaleString()}
+                        </p>
+                      ))}
+                    </div>
+                  );
+                }
+                return null;
+              }}
+            />
             <Legend />
             <Line yAxisId="left" type="monotone" dataKey="duration" name="Duration (ms)" stroke="#8884d8" dot={false} />
             <Line yAxisId="right" type="monotone" dataKey="bytes" name="Bytes/s" stroke="#82ca9d" dot={false} />
+            <Line yAxisId="right" type="monotone" dataKey="packets" name="Packets/s" stroke="#ff8042" dot={false} />
           </LineChart>
         </ResponsiveContainer>
       </div>
