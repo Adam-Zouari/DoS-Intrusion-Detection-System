@@ -20,6 +20,17 @@ const NetworkSummary: React.FC<NetworkSummaryProps> = ({ data }) => {
     }));
   }, [summary.protocolDistribution]);
 
+  // Format attack distribution data for pie chart
+  const attackData = useMemo(() => {
+    return Object.entries(summary.attackCounts).map(([name, value]) => ({
+      name,
+      value
+    }));
+  }, [summary.attackCounts]);
+
+  // Add more colors for different attack types
+  const ATTACK_COLORS = ['#FF8042', '#FF4560', '#775DD0', '#FEB019', '#00E396', '#008FFB', '#A300F3', '#FD6585'];
+
   // Format time series data for chart
   const timeData = useMemo(() => {
     return summary.timeSeriesData
@@ -72,7 +83,10 @@ const NetworkSummary: React.FC<NetworkSummaryProps> = ({ data }) => {
                 outerRadius={100}
                 dataKey="value"
                 nameKey="name"
-                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(1)}%`}
+                label={({ name, percent }) => 
+                  percent > 0 ? 
+                  `${name}: ${(percent * 100).toFixed(1)}%` : null
+                }
               >
                 {protocolData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -85,69 +99,34 @@ const NetworkSummary: React.FC<NetworkSummaryProps> = ({ data }) => {
         </div>
         
         <div className="chart-wrapper">
-          <h3>Traffic Over Time</h3>
+          <h3>Attack Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <LineChart
-              data={timeData}
-              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis 
-                dataKey="timestamp" 
-                tick={false}
-                label={{ value: 'Time', position: 'insideBottomRight', offset: -10 }} 
-              />
-              <YAxis yAxisId="left" />
-              <YAxis yAxisId="right" orientation="right" />
-              <Tooltip labelFormatter={(label) => new Date(label).toLocaleTimeString()} />
+            <PieChart>
+              <Pie
+                data={attackData}
+                cx="50%"
+                cy="50%"
+                labelLine={true}
+                outerRadius={100}
+                dataKey="value"
+                nameKey="name"
+                label={({ name, percent }) => 
+                  percent > 0.02 ? 
+                  `${name}: ${(percent * 100).toFixed(1)}%` : null
+                }
+              >
+                {attackData.map((entry, index) => (
+                  <Cell 
+                    key={`cell-${index}`} 
+                    fill={entry.name === 'BENIGN' ? '#00C49F' : ATTACK_COLORS[index % ATTACK_COLORS.length]}
+                  />
+                ))}
+              </Pie>
+              <Tooltip formatter={(value) => value.toLocaleString()} />
               <Legend />
-              <Line 
-                yAxisId="left"
-                type="monotone" 
-                dataKey="bytes" 
-                name="Bytes/s"
-                stroke="#8884d8" 
-                activeDot={{ r: 8 }} 
-              />
-              <Line 
-                yAxisId="right"
-                type="monotone" 
-                dataKey="packets" 
-                name="Packets/s"
-                stroke="#82ca9d" 
-              />
-            </LineChart>
+            </PieChart>
           </ResponsiveContainer>
         </div>
-      </div>
-      
-      <div className="attack-summary">
-        <h3>Attack Distribution</h3>
-        <table className="attack-table">
-          <thead>
-            <tr>
-              <th>Type</th>
-              <th>Count</th>
-              <th>Percentage</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(summary.attackCounts).map(([type, count]) => (
-              <tr 
-                key={type} 
-                className={type !== 'BENIGN' ? 'attack-row' : ''}
-              >
-                <td>{type}</td>
-                <td>{count.toLocaleString()}</td>
-                <td>
-                  {summary.totalConnections > 0 
-                    ? `${((count / summary.totalConnections) * 100).toFixed(2)}%` 
-                    : '0%'}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
       </div>
     </div>
   );
