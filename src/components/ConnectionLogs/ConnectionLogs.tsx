@@ -49,12 +49,20 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
     if (!filterValue) return data;
     
     return data.filter(flow => {
+      if (filterField === 'Protocol') {
+        // For Protocol field, convert number to name before comparing
+        const protocolValue = flow[filterField];
+        if (protocolValue === undefined) return false;
+        const protocolName = getProtocolName(protocolValue);
+        return protocolName.toLowerCase().includes(filterValue.toLowerCase());
+      }
+      
       const fieldValue = flow[filterField];
       if (fieldValue === undefined) return false;
       
       return String(fieldValue).toLowerCase().includes(filterValue.toLowerCase());
     });
-  }, [data, filterField, filterValue]);
+  }, [data, filterField, filterValue, getProtocolName]);
 
   const sortedData = useMemo(() => {
     return [...filteredData].sort((a, b) => {
@@ -87,7 +95,7 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
 
   // Common filter fields
   const filterFields: Array<keyof FlowData> = [
-    'Label', 'Src IP', 'Dst IP', 'Protocol', 'Flow ID'
+    'Label', 'Src IP', 'Dst IP', 'Protocol'
   ];
 
   const handleFilterChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,9 +135,6 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
         <table>
           <thead>
             <tr>
-              <th onClick={() => toggleSort('Flow ID')}>
-                Flow ID {sortField === 'Flow ID' && (sortDirection === 'asc' ? '▲' : '▼')}
-              </th>
               <th onClick={() => toggleSort('Src IP')}>
                 Source {sortField === 'Src IP' && (sortDirection === 'asc' ? '▲' : '▼')}
               </th>
@@ -145,6 +150,9 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
               <th onClick={() => toggleSort('Flow Bytes/s')}>
                 Bytes/s {sortField === 'Flow Bytes/s' && (sortDirection === 'asc' ? '▲' : '▼')}
               </th>
+              <th onClick={() => toggleSort('Flow Packets/s' as keyof FlowData)}>
+                Packets/s {sortField === 'Flow Packets/s' as keyof FlowData && (sortDirection === 'asc' ? '▲' : '▼')}
+              </th>
               <th onClick={() => toggleSort('Timestamp')}>
                 Time {sortField === 'Timestamp' && (sortDirection === 'asc' ? '▲' : '▼')}
               </th>
@@ -157,12 +165,12 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
             {paginatedData.length > 0 ? (
               paginatedData.map((flow, index) => (
                 <tr key={index} className={flow['Label'] !== 'BENIGN' ? 'attack-row' : ''}>
-                  <td title={flow['Flow ID']}>{flow['Flow ID'].substring(0, 15)}...</td>
                   <td>{flow['Src IP']}:{flow['Src Port']}</td>
                   <td>{flow['Dst IP']}:{flow['Dst Port']}</td>
                   <td>{getProtocolName(flow['Protocol'])}</td>
                   <td>{flow['Flow Duration'].toLocaleString()} ms</td>
                   <td>{Math.round(flow['Flow Bytes/s'] || 0).toLocaleString()}</td>
+                  <td>{Math.round(flow['Flow Packets/s'] || 0).toLocaleString()}</td>
                   <td>{formatTimestamp(flow['Timestamp'])}</td>
                   <td>
                     <span className={`label-badge ${flow['Label']}`}>
@@ -238,10 +246,9 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
           <div className="guide-item">
             <h4>Basic Information</h4>
             <ul>
-              <li><strong>Flow ID:</strong> Unique identifier for the network flow</li>
               <li><strong>Source/Destination:</strong> IP addresses and ports involved</li>
               <li><strong>Protocol:</strong> TCP, UDP, ICMP, or other network protocol</li>
-              <li><strong>Timestamp:</strong> When the flow was recorded</li>
+              <li><strong>Time:</strong> When the flow was recorded</li>
             </ul>
           </div>
           
@@ -251,7 +258,6 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
               <li><strong>Flow Duration:</strong> Length of the connection in milliseconds</li>
               <li><strong>Bytes/s:</strong> Data transfer rate</li>
               <li><strong>Packets/s:</strong> Number of packets per second</li>
-              <li><strong>IAT (Inter-Arrival Time):</strong> Time between packets</li>
             </ul>
           </div>
           
