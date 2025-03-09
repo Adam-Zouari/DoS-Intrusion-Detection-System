@@ -33,6 +33,9 @@ export interface FlowData {
   'Idle Mean'?: number;
 }
 
+// Define AttackType as a string literal type based on the values seen in the AnomalyDetection component
+export type AttackType = 'BENIGN' | 'DDOS' | 'DOS' | 'PORT SCAN' | string;
+
 // Protocol distribution interface
 export interface ProtocolDistribution {
   TCP: number;

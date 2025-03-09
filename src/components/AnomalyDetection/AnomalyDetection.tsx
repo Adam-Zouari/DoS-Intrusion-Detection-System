@@ -62,10 +62,12 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
     
     data.forEach(flow => {
       const srcIP = flow['Src IP'];
-      if (!hostFlows.has(srcIP)) {
-        hostFlows.set(srcIP, []);
+      if (srcIP) { // Check if srcIP is defined
+        if (!hostFlows.has(srcIP)) {
+          hostFlows.set(srcIP, []);
+        }
+        hostFlows.get(srcIP)!.push(flow);
       }
-      hostFlows.get(srcIP)!.push(flow);
     });
     
     // Check for suspicious patterns
@@ -116,7 +118,7 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
     return attacks.map(attack => ({
       name: attack.attackType,
       value: attack.count,
-      color: ATTACK_COLORS[attack.attackType] || '#999'
+      color: ATTACK_COLORS[attack.attackType as keyof typeof ATTACK_COLORS] || '#999'
     }));
   }, [attacks]);
   
@@ -209,7 +211,7 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
           </h3>
           
           <p className="attack-description">
-            {ATTACK_DESCRIPTIONS[selectedAttackDetails.attackType]}
+            {ATTACK_DESCRIPTIONS[selectedAttackDetails.attackType as keyof typeof ATTACK_DESCRIPTIONS] || 'Description not available'}
           </p>
           
           <div className="attack-stats">
@@ -286,31 +288,6 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
             <p>No suspicious traffic patterns detected in the current dataset.</p>
           </div>
         )}
-      </div>
-      
-      <div className="attack-visualization">
-        <h3>Attack Volume by Type</h3>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={attacks}
-            margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="attackType" />
-            <YAxis />
-            <Tooltip formatter={(value) => [`${value} connections`, undefined]} />
-            <Legend />
-            <Bar 
-              dataKey="count" 
-              name="Connection Count" 
-              onClick={(data) => setSelectedAttack(data.attackType)}
-            >
-              {attacks.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={ATTACK_COLORS[entry.attackType] || '#999'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
       </div>
     </div>
   );
