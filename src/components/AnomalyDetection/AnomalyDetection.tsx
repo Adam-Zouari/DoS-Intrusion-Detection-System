@@ -170,33 +170,44 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
         <div className="chart-container">
           <h3>Attack Distribution</h3>
           <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={attackDistribution}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                outerRadius={120}
-                dataKey="value"
-                nameKey="name"
-                label={({ name, percent }) => 
-                  percent > 0.05 ? `${name}: ${(percent * 100).toFixed(1)}%` : ''
-                }
+            <BarChart 
+              data={attackDistribution}
+              margin={{ top: 20, right: 30, left: 60, bottom: 40 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis 
+                dataKey="name" 
+                label={{ 
+                  value: 'Attack Type', 
+                  position: 'bottom', 
+                  offset: 10,
+                  textAnchor: 'middle'
+                }} 
+              />
+              <YAxis 
+                label={{ 
+                  value: 'Number of Connections', 
+                  angle: -90, 
+                  position: 'center',
+                  textAnchor: 'middle',
+                  dx: -50
+                }} 
+              />
+              <Tooltip formatter={(value) => [`${value} connections`, undefined]} />
+              {/* Removing Legend component entirely */}
+              <Bar 
+                dataKey="value" 
+                onClick={(data) => setSelectedAttack(data.name as AttackType)}
               >
                 {attackDistribution.map((entry, index) => (
                   <Cell 
                     key={`cell-${index}`} 
                     fill={entry.color} 
-                    onClick={() => setSelectedAttack(entry.name as AttackType)}
                     style={{ cursor: 'pointer' }}
                   />
                 ))}
-              </Pie>
-              <Tooltip 
-                formatter={(value) => [`${value} connections`, undefined]}
-              />
-              <Legend onClick={(data) => setSelectedAttack((data.payload as unknown as { name: string }).name as AttackType)} />
-            </PieChart>
+              </Bar>
+            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
