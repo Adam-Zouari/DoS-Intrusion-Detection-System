@@ -300,7 +300,10 @@ const createEmptyAnomalyDetection = () => {
 const getFlowData = async (date) => {
   // Check if we have cached this data
   if (cachedData[date]) {
-    return cachedData[date];
+    return {
+      data: cachedData[date],
+      timestamp: lastReadTime
+    };
   }
   
   return new Promise((resolve, reject) => {
@@ -310,7 +313,7 @@ const getFlowData = async (date) => {
     // Check if file exists
     if (!fs.existsSync(filePath)) {
       console.log(`File not found: ${filePath}`);
-      resolve([]);
+      resolve({ data: [], timestamp: new Date() });
       return;
     }
     
@@ -330,7 +333,9 @@ const getFlowData = async (date) => {
         
         // Cache the results
         cachedData[date] = processedData;
-        resolve(processedData);
+        const timestamp = new Date();
+        lastReadTime = timestamp;
+        resolve({ data: processedData, timestamp });
       })
       .on('error', (error) => {
         console.error(`Error reading CSV: ${error.message}`);

@@ -1,11 +1,14 @@
 import { FlowData, ProtocolDistribution, HostStats, AttackStats } from '../types/flowData';
-import Papa from 'papaparse';
 
 // Re-export the types so they can be imported from this module
 export type { FlowData, ProtocolDistribution, HostStats, AttackStats };
 
 // Use the server API endpoint instead of direct file access
 const API_BASE_URL = 'http://localhost:5000/api';
+
+// For real-time data updates tracking
+let lastDataTimestamp: number | null = null;
+const subscribers: ((data: FlowData[]) => void)[] = [];
 
 // Get current date in yyyy-mm-dd format
 const getCurrentDateString = (): string => {
@@ -32,6 +35,14 @@ export const fetchFlowData = async (date?: string): Promise<FlowData[]> => {
     }
     
     const data = await response.json();
+    
+    // If this is new data, update timestamp and notify subscribers
+    const serverTimestamp = response.headers.get('last-modified');
+    if (serverTimestamp && (lastDataTimestamp === null || new Date(serverTimestamp).getTime() > lastDataTimestamp)) {
+      lastDataTimestamp = new Date(serverTimestamp).getTime();
+      notifySubscribers(data);
+    }
+    
     return data as FlowData[];
   } catch (error) {
     console.error('Error fetching flow data:', error);
@@ -39,6 +50,55 @@ export const fetchFlowData = async (date?: string): Promise<FlowData[]> => {
   }
 };
 
+// Subscribe to real-time data updates
+export const subscribeToDataUpdates = (callback: (data: FlowData[]) => void): () => void => {
+  subscribers.push(callback);
+  
+  // Start polling if this is the first subscriber
+  if (subscribers.length === 1) {
+    startPolling();
+  }
+  
+  // Return unsubscribe function
+  return () => {
+    const index = subscribers.indexOf(callback);
+    if (index !== -1) {
+      subscribers.splice(index, 1);
+    }
+    
+    // Stop polling if no more subscribers
+    if (subscribers.length === 0) {
+      stopPolling();
+    }
+  };
+};
+
+let pollingInterval: NodeJS.Timeout | null = null;
+
+// Start polling for data updates
+const startPolling = () => {
+  if (pollingInterval === null) {
+    // Poll every 5 seconds to match server refresh rate
+    pollingInterval = setInterval(async () => {
+      await fetchFlowData();
+    }, 5000);
+  }
+};
+
+// Stop polling
+const stopPolling = () => {
+  if (pollingInterval !== null) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+  }
+};
+
+// Notify all subscribers of new data
+const notifySubscribers = (data: FlowData[]) => {
+  subscribers.forEach(callback => callback(data));
+};
+
+// Process functions - existing code
 export const processNetworkSummary = (data: FlowData[]) => {
   const totalConnections = data.length;
   let totalBytes = 0;

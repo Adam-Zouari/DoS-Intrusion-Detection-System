@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFlowData, processNetworkSummary, processHostDetails, processAnomalies } from '../../services/dataService';
+import { fetchFlowData, processNetworkSummary, processHostDetails, processAnomalies, subscribeToDataUpdates } from '../../services/dataService';
 import { FlowData } from '../../types/flowData';
 import NetworkSummary from '../NetworkSummary/NetworkSummary';
 import MachineDetails from '../MachineDetails/MachineDetails';
@@ -14,8 +14,9 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<string>('summary');
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   
-  // Fetch data on component mount and periodically
+  // Initial data load and subscription setup
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -34,10 +35,16 @@ const Dashboard: React.FC = () => {
     
     loadData();
     
-    // Refresh data every 60 seconds
-    const interval = setInterval(loadData, 60000);
+    // Subscribe to real-time data updates
+    const unsubscribe = subscribeToDataUpdates((newData) => {
+      setIsRefreshing(true);
+      setFlowData(newData);
+      setLastUpdated(new Date());
+      setIsRefreshing(false);
+    });
     
-    return () => clearInterval(interval);
+    // Clean up subscription on unmount
+    return () => unsubscribe();
   }, []);
   
   const renderActiveTab = () => {
@@ -71,6 +78,7 @@ const Dashboard: React.FC = () => {
         <h1>Network Traffic Analysis Dashboard</h1>
         <div className="last-updated">
           Last updated: {lastUpdated.toLocaleTimeString()}
+          {isRefreshing && <span className="refreshing-indicator"> (Refreshing...)</span>}
         </div>
       </header>
       

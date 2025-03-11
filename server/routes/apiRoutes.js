@@ -110,19 +110,21 @@ router.get('/all-data', async (req, res) => {
   }
 });
 
-// Route to get flow data for a specific date
+// Get flow data for a specific date
 router.get('/flow-data', async (req, res) => {
   try {
-    const date = req.query.date;
-    if (!date) {
-      return res.status(400).json({ error: 'Date parameter is required' });
+    const date = req.query.date || new Date().toISOString().split('T')[0];
+    const result = await dataService.getFlowData(date);
+    
+    // Include timestamp in response header
+    if (result.timestamp) {
+      res.setHeader('Last-Modified', result.timestamp.toUTCString());
     }
     
-    const data = await dataService.getFlowData(date);
-    res.json(data);
+    res.json(result.data || []);
   } catch (error) {
-    console.error('Error in flow-data endpoint:', error);
-    res.status(500).json({ error: 'Failed to retrieve data' });
+    console.error('Error fetching flow data:', error);
+    res.status(500).json({ error: 'Failed to fetch flow data' });
   }
 });
 

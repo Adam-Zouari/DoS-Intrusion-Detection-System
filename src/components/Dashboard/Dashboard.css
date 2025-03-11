@@ -93,6 +93,18 @@
   border-top: 1px solid #ddd;
 }
 
+.refreshing-indicator {
+  color: #4CAF50;
+  font-style: italic;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0% { opacity: 0.6; }
+  50% { opacity: 1; }
+  100% { opacity: 0.6; }
+}
+
 /* Responsive layout */
 @media (max-width: 768px) {
   .dashboard-nav ul {
