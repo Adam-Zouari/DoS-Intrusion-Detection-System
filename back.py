@@ -58,14 +58,31 @@ def process_new_lines(file_path):
             return
 
         skip_rows = 0
+        df_analyzed = None
+        
         if os.path.exists(output_file_path):
-            df_analyzed = pd.read_csv(output_file_path)
-            skip_rows = df_analyzed.shape[0]
-        else:
-            df_analyzed = None
+            try:
+                # Add error handling for reading the analyzed file
+                df_analyzed = pd.read_csv(output_file_path, error_bad_lines=False, warn_bad_lines=True)
+                skip_rows = df_analyzed.shape[0]
+            except Exception as e:
+                logging.error(f"Error reading analyzed file {output_file_path}: {e}")
+                # If we can't read the existing file, we'll treat it as non-existent
+                df_analyzed = None
 
-        # Read only new rows with 'Flow Bytes/s' and 'Flow Packets/s' as strings
-        df_to_process = pd.read_csv(file_path, skiprows=range(1, skip_rows+1))
+        # Read only new rows with error handling
+        try:
+            # Use error_bad_lines=False to skip problematic rows
+            df_to_process = pd.read_csv(file_path, 
+                                      skiprows=range(1, skip_rows+1), 
+                                      error_bad_lines=False,  
+                                      warn_bad_lines=True,
+                                      on_bad_lines='skip')
+        except TypeError:
+            # For newer pandas versions where error_bad_lines is deprecated
+            df_to_process = pd.read_csv(file_path, 
+                                      skiprows=range(1, skip_rows+1), 
+                                      on_bad_lines='skip')
 
         # Handle missing values in the dataset (NaN)
         df_to_process = df_to_process.replace([np.inf, -np.inf], np.nan)
@@ -73,10 +90,34 @@ def process_new_lines(file_path):
 
         if df_to_process.empty:
             return
+            
+        # Filter out rows where Protocol is 0
+        initial_row_count = df_to_process.shape[0]
+        if "Protocol" in df_to_process.columns:
+            df_to_process = df_to_process[df_to_process["Protocol"] != 0]
+            filtered_row_count = initial_row_count - df_to_process.shape[0]
+            if filtered_row_count > 0:
+                logging.info(f"Filtered out {filtered_row_count} rows with Protocol 0 from {filename}")
+            
+            if df_to_process.empty:
+                logging.info(f"All rows were filtered out from {filename}")
+                return
 
         # Remove unnecessary columns
-        df_filtered = df_to_process.drop(columns=[col for col in columns_to_remove], errors="ignore")
+        df_filtered = df_to_process.drop(columns=[col for col in columns_to_remove if col in df_to_process.columns], errors="ignore")
 
+        # Make sure we have all the expected columns for the model
+        expected_columns = model.feature_names_in_ if hasattr(model, 'feature_names_in_') else None
+        if expected_columns is not None:
+            missing_columns = set(expected_columns) - set(df_filtered.columns)
+            if missing_columns:
+                logging.warning(f"Missing columns for model: {missing_columns}")
+                # Add missing columns with default values
+                for col in missing_columns:
+                    df_filtered[col] = 0
+
+            # Ensure columns are in the right order
+            df_filtered = df_filtered[expected_columns]
 
         # Predict labels
         X = df_filtered.values
