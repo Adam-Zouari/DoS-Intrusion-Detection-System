@@ -161,12 +161,12 @@ def monitor_today_file():
 stop_event = threading.Event()
 
 def main():
-    # Process existing files first
-    for filename in os.listdir(daily_dir):
-        if filename.endswith(".csv"):
-            file_path = os.path.join(daily_dir, filename)
-            last_processed_sizes[filename] = 0  # Use file name as the key
-            process_new_lines(file_path)
+    # Process only today's file
+    today_file = get_today_filename()
+    today_path = os.path.join(daily_dir, today_file)
+    if os.path.exists(today_path):
+        last_processed_sizes[today_file] = 0  # Use file name as the key
+        process_new_lines(today_path)
 
     # Start watchdog observer
     event_handler = FlowFileHandler()
