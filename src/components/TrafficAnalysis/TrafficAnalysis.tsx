@@ -10,6 +10,33 @@ interface TrafficAnalysisProps {
 // Format timestamps consistently across the component
 const formatTimestamp = (timestamp: string) => {
   try {
+    // Parse DD/MM/YYYY HH:MM:SS AM/PM format
+    const parts = timestamp.split(' ');
+    if (parts.length >= 3) {
+      const dateParts = parts[0].split('/');
+      if (dateParts.length === 3) {
+        const day = parseInt(dateParts[0]);
+        const month = parseInt(dateParts[1]) - 1; // Month is 0-indexed in JS Date
+        const year = parseInt(dateParts[2]);
+        
+        // Parse time parts
+        const timeParts = parts[1].split(':');
+        let hours = parseInt(timeParts[0]);
+        const minutes = parseInt(timeParts[1]);
+        const seconds = parseInt(timeParts[2]);
+        
+        // Handle AM/PM
+        if (parts[2].toUpperCase() === 'PM' && hours < 12) {
+          hours += 12;
+        } else if (parts[2].toUpperCase() === 'AM' && hours === 12) {
+          hours = 0;
+        }
+        
+        const date = new Date(year, month, day, hours, minutes, seconds);
+        return date.toLocaleTimeString();
+      }
+    }
+    // Fallback to default parsing if format doesn't match expected pattern
     return new Date(timestamp).toLocaleTimeString();
   } catch (e) {
     return timestamp;
