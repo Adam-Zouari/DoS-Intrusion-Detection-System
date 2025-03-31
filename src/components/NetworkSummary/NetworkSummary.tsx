@@ -50,7 +50,7 @@ const NetworkSummary: React.FC<NetworkSummaryProps> = ({ data }) => {
       
       <div className="stat-cards">
         <div className="stat-card">
-          <h3>Active Connections</h3>
+          <h3>Number of Flows</h3>
           <p className="stat-value">{summary.totalConnections.toLocaleString()}</p>
         </div>
         

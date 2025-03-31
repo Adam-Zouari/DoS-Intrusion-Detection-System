@@ -151,7 +151,7 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
           <div className="anomaly-card">
             <h3>Benign Traffic</h3>
             <p className="anomaly-value">{benignStats?.count.toLocaleString() || 0}</p>
-            <p className="anomaly-label">Normal connections</p>
+            <p className="anomaly-label">Normal Flows</p>
           </div>
           
           <div className="anomaly-card">
@@ -182,7 +182,7 @@ const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {
               />
               <YAxis 
                 label={{ 
-                  value: 'Number of Connections', 
+                  value: 'Number of Flows', 
                   angle: -90, 
                   position: 'center',
                   textAnchor: 'middle',
