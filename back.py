@@ -29,10 +29,24 @@ os.makedirs(analyzed_dir, exist_ok=True)
 logging.basicConfig(filename="file_monitor.log", level=logging.INFO, format="%(asctime)s - %(message)s")
 
 # Columns to be removed
-columns_to_remove = ["Flow ID", "Src IP", "Src Port", "Dst IP", "Dst Port", "Protocol", "Timestamp", "Label"]
+# List of columns to KEEP
+columns_to_keep = [
+    "Flow Duration",
+    "Total Fwd Packet",
+    "Fwd Packet Length Mean",
+    "Flow Bytes/s",
+    "Flow Packets/s",
+    "Flow IAT Mean",
+    "FIN Flag Count",
+    "SYN Flag Count",
+    "RST Flag Count",
+    "ACK Flag Count"
+]
+
+
 
 # Encoding Mapping
-label_mapping = {0: "BENIGN", 1: "DDoS", 2: "DoS", 3: "PortScan"}
+label_mapping = {0: "BENIGN", 1: "DoS"}
 
 # Track processed file sizes (by file name)
 last_processed_sizes = {}
@@ -103,8 +117,8 @@ def process_new_lines(file_path):
                 logging.info(f"All rows were filtered out from {filename}")
                 return
 
-        # Remove unnecessary columns
-        df_filtered = df_to_process.drop(columns=[col for col in columns_to_remove if col in df_to_process.columns], errors="ignore")
+        # Filter the DataFrame to keep only these columns
+        df_filtered = df_to_process[columns_to_keep]
 
         # Make sure we have all the expected columns for the model
         expected_columns = model.feature_names_in_ if hasattr(model, 'feature_names_in_') else None
@@ -120,8 +134,8 @@ def process_new_lines(file_path):
             df_filtered = df_filtered[expected_columns]
 
         # Predict labels
-        X = df_filtered.values
-        y_pred = model.predict(X)
+        # Convert DataFrame to NumPy array to avoid feature names warning
+        y_pred = model.predict(df_filtered.values)
         df_to_process["Label"] = [label_mapping.get(label, -1) for label in y_pred]
 
         # Append processed data
