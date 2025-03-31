@@ -1,5 +1,5 @@
 {
     "daily_dir": "C:\\Users\\ademz\\Courses\\AI and CyberSecurity\\CICFlowMeter\\target\\data\\daily",
     "analyzed_dir": "C:\\Users\\ademz\\Courses\\AI and CyberSecurity\\CICFlowMeter\\target\\data\\Analysed_Data",
-    "model_path": "C:\\Users\\ademz\\Courses\\AI and CyberSecurity\\ML\\SVM_model.joblib"
+    "model_path": "C:\\Users\\ademz\\Courses\\AI and CyberSecurity\\Manual_ML\\Logistic Regression_model.joblib"
 }
