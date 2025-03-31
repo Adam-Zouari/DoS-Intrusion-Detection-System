@@ -16,16 +16,12 @@ const COLORS = {
 
 const ATTACK_COLORS = {
   'BENIGN': '#4caf50',
-  'DDOS': '#f44336',
-  'DOS': '#ff9800',
-  'PORT SCAN': '#9c27b0'
+  'DOS': '#ff9800'
 };
 
 const ATTACK_DESCRIPTIONS = {
   'BENIGN': 'Normal network traffic with no malicious intent detected.',
-  'DDOS': 'Distributed Denial of Service attack attempting to disrupt normal traffic by overwhelming targets with a flood of traffic.',
-  'DOS': 'Denial of Service attack attempting to make a service unavailable by flooding it with traffic.',
-  'PORT SCAN': 'Reconnaissance technique that determines which ports on a network are open by systematically scanning for listening services.'
+  'DOS': 'Denial of Service attack attempting to make a service unavailable by flooding it with traffic.'
 };
 
 const AnomalyDetection: React.FC<AnomalyDetectionProps> = ({ data }) => {

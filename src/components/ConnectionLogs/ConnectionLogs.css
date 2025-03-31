@@ -90,23 +90,21 @@
   font-size: 0.75rem;
   font-weight: 600;
   color: white;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  text-shadow: 0 1px 1px rgba(0,0,0,0.1);
+  letter-spacing: 0.5px;
 }
 
 .label-badge.BENIGN {
   background-color: #4caf50;
 }
 
-.label-badge.DDOS {
-  background-color: #f44336;
+
+.label-badge.DoS {
+  background-color: #ff0000;
+  padding: 0.3rem 0.7rem;
 }
 
-.label-badge.DOS {
-  background-color: #ff9800;
-}
-
-.label-badge.PORT {
-  background-color: #9c27b0;
-}
 
 .no-data {
   text-align: center;

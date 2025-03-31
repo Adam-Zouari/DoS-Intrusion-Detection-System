@@ -292,9 +292,7 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
             <h4>Classification</h4>
             <ul>
               <li><strong>BENIGN:</strong> Normal network traffic</li>
-              <li><strong>DDOS:</strong> Distributed Denial of Service attack</li>
               <li><strong>DOS:</strong> Denial of Service attack</li>
-              <li><strong>PORT SCAN:</strong> Port scanning activity</li>
             </ul>
           </div>
         </div>

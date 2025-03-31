@@ -105,9 +105,7 @@ export const processNetworkSummary = (data: FlowData[]) => {
   let totalPackets = 0;
   let attackCounts = {
     BENIGN: 0,
-    DDOS: 0,
-    DOS: 0,
-    'PORT SCAN': 0
+    DoS: 0
   };
   
   const protocolDistribution: ProtocolDistribution = {
@@ -258,7 +256,7 @@ export const processAnomalies = (data: FlowData[]): AttackStats[] => {
   const attackMap = new Map<string, AttackStats>();
   
   // Initialize with all attack types
-  ['BENIGN', 'DDOS', 'DOS', 'PORT SCAN'].forEach(type => {
+  ['BENIGN','DoS'].forEach(type => {
     attackMap.set(type, {
       attackType: type as any,
       count: 0,
