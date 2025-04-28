@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -30,3 +31,7 @@ tsconfig.json
 tsconfig.node.json
 vite.config.ts
 eslint.config.js
+
+
+file_monitor.log
+
