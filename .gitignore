@@ -31,7 +31,7 @@ tsconfig.json
 tsconfig.node.json
 vite.config.ts
 eslint.config.js
+tsconfig.app.json
 
-
-file_monitor.log
+Python_Server/file_monitor.log
 
