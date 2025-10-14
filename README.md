@@ -34,7 +34,7 @@ The server will run on port 5000 by default.
 ### Data Source
 
 The application reads network flow data from CSV files stored at:
-`C:\Users\ademz\Courses\AI and CyberSecurity\CICFlowMeter\target\data\Analysed_Data`
+`CICFlowMeter\target\data\Analysed_Data`
 
 Each day's data is stored in a file named with the format: `YYYY-MM-DD_Flow.csv`
 
