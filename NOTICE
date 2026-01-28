@@ -1,0 +1,76 @@
+DoS Intrusion Detection System
+Copyright 2026 Adam Zouari
+
+This product includes software developed by Adam Zouari.
+
+================================================================================
+
+ORIGINAL AUTHOR AND COPYRIGHT HOLDER
+================================================================================
+
+Author: Adam Zouari
+Email: adam.zouari08@gmail.com
+GitHub: https://github.com/Adam-Zouari
+
+================================================================================
+
+THIRD-PARTY COMPONENTS
+================================================================================
+
+This software uses the following third-party libraries and datasets:
+
+1. CIC-IDS-2017 Dataset
+   - Source: Canadian Institute for Cybersecurity
+   - License: Available for research and educational purposes
+   - URL: https://www.unb.ca/cic/datasets/ids-2017.html
+
+2. CICFlowMeter
+   - Network traffic flow generator
+   - Source: Canadian Institute for Cybersecurity
+
+3. Python Libraries:
+   - scikit-learn (BSD License)
+   - pandas (BSD License)
+   - numpy (BSD License)
+   - watchdog (Apache License 2.0)
+   - joblib (BSD License)
+
+4. JavaScript/Node.js Libraries:
+   - React (MIT License)
+   - Express (MIT License)
+   - Socket.IO (MIT License)
+   - TypeScript (Apache License 2.0)
+   - Vite (MIT License)
+   - Recharts (MIT License)
+
+================================================================================
+
+ATTRIBUTION REQUIREMENTS
+================================================================================
+
+If you use, modify, or distribute this software or derivative works:
+
+1. You MUST retain this NOTICE file
+2. You MUST provide clear attribution to the original author
+3. You MUST state any significant modifications made
+4. You MUST include a copy of the Apache License 2.0
+
+Recommended citation format:
+Adam Zouari. (2026). DoS Intrusion Detection System: Real-time ML-based
+Network Attack Detection.
+https://github.com/Adam-Zouari/DoS-Intrusion-Detection-System
+
+================================================================================
+
+PATENT NOTICE
+================================================================================
+
+This software is licensed under the Apache License 2.0, which includes an 
+express grant of patent rights from contributors to users. See the LICENSE 
+file for details.
+
+================================================================================
+
+For questions regarding this software, please contact:
+Adam Zouari - adam.zouari08@gmail.com
+

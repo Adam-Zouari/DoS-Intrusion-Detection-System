@@ -2,6 +2,35 @@
 
 A comprehensive real-time network intrusion detection system that uses machine learning to identify Denial of Service (DoS) attacks in network traffic. The system combines AI-powered traffic analysis with an interactive web dashboard for monitoring and visualization.
 
+---
+
+
+## 📜 Copyright & License
+
+**Copyright © 2026 Adam Zouari. All Rights Reserved.**
+
+**Original Author:** Adam Zouari
+**Email:** adam.zouari08@gmail.com
+**GitHub:** https://github.com/Adam-Zouari
+
+This project is licensed under the **Apache License 2.0** - see the [LICENSE](LICENSE) file for details.
+
+### ⚖️ Terms of Use
+
+- ✅ **Attribution Required**: Any use, modification, or derivative work must credit the original author
+- ✅ **Academic Use**: Permitted with proper citation
+- ✅ **Commercial Use**: Permitted under Apache 2.0 terms with attribution
+- ✅ **Modifications**: Must be documented and attributed
+- ⚠️ **Patent Protection**: Includes patent grant and retaliation clause
+
+**Citation:**
+```
+Adam Zouari. (2026). DoS Intrusion Detection System: Real-time ML-based Network Attack Detection.
+https://github.com/Adam-Zouari/DoS-Intrusion-Detection-System
+```
+
+---
+
 ## Table of Contents
 - [System Architecture](#system-architecture)
 - [AI Model Training](#ai-model-training)
@@ -515,12 +544,50 @@ DoS-Intrusion-Detection-System/
 
 ---
 
-## License
+## 📄 License
 
-This project is for educational and research purposes.
+This project is licensed under the **Apache License 2.0**. See the [LICENSE](LICENSE) file for full details.
 
-## Acknowledgments
+**Key Points:**
+- ✅ Free to use, modify, and distribute
+- ✅ Commercial use allowed
+- ✅ Patent grant included
+- ⚠️ **Must provide attribution to original author**
+- ⚠️ **Must state significant changes made**
+- ⚠️ **Must include copy of license**
 
+---
+
+## 🙏 Acknowledgments
+
+### Original Development
+- **Author**: Adam Zouari
+- **Email**: adam.zouari08@gmail.com
+- **GitHub**: https://github.com/Adam-Zouari
+
+### Datasets & Tools
 - **CIC-IDS-2017 Dataset**: Canadian Institute for Cybersecurity
 - **CICFlowMeter**: Network traffic flow generator
 - **scikit-learn**: Machine learning library
+- **React & TypeScript**: Frontend framework
+- **Node.js & Express**: Backend API server
+
+### Future Contributors
+If you build upon this work, please add your name below with a description of your contributions:
+- [Contributor Name] - [Contribution Description] - [Date]
+
+---
+
+## 📞 Contact & Support
+
+**Original Author**: Adam Zouari
+**Email**: adam.zouari08@gmail.com
+**GitHub**: https://github.com/Adam-Zouari
+
+For questions about the original implementation, please contact the author above.
+
+---
+
+## ⚠️ Disclaimer
+
+This software is provided "AS IS" without warranty of any kind. The author is not liable for any damages arising from the use of this software. This tool is intended for educational and research purposes in controlled environments only. Unauthorized network monitoring or attack simulation may be illegal.
