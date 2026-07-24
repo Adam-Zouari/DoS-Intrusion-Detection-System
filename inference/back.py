@@ -7,26 +7,48 @@ import logging
 import json
 import threading
 import traceback
+from pathlib import Path
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 import numpy as np
 
-# Load configuration from JSON
-with open("C:/Users/ademz/Courses/AI and CyberSecurity/Back/config.json", "r") as f:
+# Resolve configuration relative to the repository unless explicitly overridden.
+project_root = Path(__file__).resolve().parents[1]
+config_path = Path(
+    os.environ.get("IDS_CONFIG_PATH", project_root / "config" / "config.local.json")
+)
+
+if not config_path.exists():
+    raise FileNotFoundError(
+        f"Configuration not found at {config_path}. "
+        "Copy config/config.example.json to config/config.local.json and update it."
+    )
+
+with config_path.open("r", encoding="utf-8") as f:
     config = json.load(f)
 
-daily_dir = config["daily_dir"]
-analyzed_dir = config["analyzed_dir"]
-model_path = config["model_path"]
 
-# Load the trained SVM model
+def resolve_config_path(value):
+    path = Path(value).expanduser()
+    return path if path.is_absolute() else project_root / path
+
+
+daily_dir = resolve_config_path(config["daily_dir"])
+analyzed_dir = resolve_config_path(config["analyzed_dir"])
+model_path = resolve_config_path(config["model_path"])
+
+# Load the configured model pipeline.
 model = joblib.load(model_path)
 
 # Ensure the analyzed directory exists
 os.makedirs(analyzed_dir, exist_ok=True)
 
 # Logging setup
-logging.basicConfig(filename="file_monitor.log", level=logging.INFO, format="%(asctime)s - %(message)s")
+logging.basicConfig(
+    filename=project_root / "runtime-data" / "file_monitor.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(message)s",
+)
 
 # Columns to be removed
 # List of columns to KEEP

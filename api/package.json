@@ -1,7 +1,7 @@
 {
-  "name": "cyber-attacks-dashboard-server",
+  "name": "ids-dashboard-api",
   "version": "1.0.0",
-  "description": "Server for CyberAttacks Dashboard",
+  "description": "API server for the network intrusion detection dashboard",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",

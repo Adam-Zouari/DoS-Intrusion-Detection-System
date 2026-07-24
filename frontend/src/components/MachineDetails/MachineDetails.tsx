@@ -33,21 +33,6 @@ const MachineDetails: React.FC<MachineDetailsProps> = ({ data }) => {
     });
   }, [hosts, sortBy, sortDirection]);
 
-  const selectedHostData = useMemo(() => {
-    return hosts.find(host => host.ip === selectedHost) || null;
-  }, [hosts, selectedHost]);
-  
-  // Removed the topActiveHosts useMemo as it's no longer needed
-  
-  const flagData = useMemo(() => {
-    if (!selectedHostData) return [];
-    
-    return Object.entries(selectedHostData.flagCounts).map(([flag, count]) => ({
-      flag,
-      count
-    }));
-  }, [selectedHostData]);
-
   return (
     <div className="machine-details full-width">
       <h2>Machine (Host) Details</h2>

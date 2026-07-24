@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { fetchFlowData, processNetworkSummary, processHostDetails, processAnomalies, subscribeToDataUpdates } from '../../services/dataService';
+import { fetchFlowData, subscribeToDataUpdates } from '../../services/dataService';
 import { FlowData } from '../../types/flowData';
 import NetworkSummary from '../NetworkSummary/NetworkSummary';
 import MachineDetails from '../MachineDetails/MachineDetails';

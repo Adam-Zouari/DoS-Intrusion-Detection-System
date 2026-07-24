@@ -66,7 +66,7 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
       }
       // Fallback to default parsing if format doesn't match expected pattern
       return new Date(timestamp).toLocaleString();
-    } catch (e) {
+    } catch {
       return timestamp;
     }
   }, []);
@@ -194,11 +194,11 @@ const ConnectionLogs: React.FC<ConnectionLogsProps> = ({ data }) => {
                 <tr key={index} className={flow['Label'] !== 'BENIGN' ? 'attack-row' : ''}>
                   <td>{flow['Src IP']}:{flow['Src Port']}</td>
                   <td>{flow['Dst IP']}:{flow['Dst Port']}</td>
-                  <td>{getProtocolName(flow['Protocol'])}</td>
+                  <td>{getProtocolName(flow['Protocol'] ?? 'Unknown')}</td>
                   <td>{flow['Flow Duration'].toLocaleString()} ms</td>
                   <td>{Math.round(flow['Flow Bytes/s'] || 0).toLocaleString()}</td>
                   <td>{Math.round(flow['Flow Packets/s'] || 0).toLocaleString()}</td>
-                  <td>{formatTimestamp(flow['Timestamp'])}</td>
+                  <td>{formatTimestamp(flow['Timestamp'] ?? '')}</td>
                   <td>
                     <span className={`label-badge ${flow['Label']}`}>
                       {flow['Label']}

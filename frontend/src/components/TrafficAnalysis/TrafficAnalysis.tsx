@@ -38,18 +38,18 @@ const formatTimestamp = (timestamp: string) => {
     }
     // Fallback to default parsing if format doesn't match expected pattern
     return new Date(timestamp).toLocaleTimeString();
-  } catch (e) {
+  } catch {
     return timestamp;
   }
 };
 
 const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
-  const [liveUpdateCounter, setLiveUpdateCounter] = useState(0);
+  const [lastRefresh, setLastRefresh] = useState(new Date());
   
   // Simulate live updates
   useEffect(() => {
     const timer = setInterval(() => {
-      setLiveUpdateCounter(prev => prev + 1);
+      setLastRefresh(new Date());
     }, 5000); // Update every 5 seconds
     
     return () => clearInterval(timer);
@@ -76,7 +76,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
         duration: flow['Flow Duration'] || 0,
         timestamp: flow['Timestamp'] || new Date().toISOString()
       }));
-  }, [data, liveUpdateCounter]); // Re-compute when liveUpdateCounter changes
+  }, [data]);
   
   // Traffic trend data
   const trafficTrendData = useMemo(() => {
@@ -130,7 +130,7 @@ const TrafficAnalysis: React.FC<TrafficAnalysisProps> = ({ data }) => {
   return (
     <div className="traffic-analysis">
       <h2>Real-Time Traffic Analysis</h2>
-      <p className="update-status">Auto-updating every 5 seconds. Last update: {new Date().toLocaleTimeString()}</p>
+      <p className="update-status">Auto-updating every 5 seconds. Last update: {lastRefresh.toLocaleTimeString()}</p>
       
       <div className="traffic-overview">
         <h3>Traffic Trend</h3>

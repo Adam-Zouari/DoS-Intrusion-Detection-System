@@ -1,18 +1,12 @@
 import React, { useMemo, useState } from 'react';
-import { FlowData, AttackStats, AttackType } from '../../types/flowData';
+import { FlowData, AttackType } from '../../types/flowData';
 import { processAnomalies } from '../../services/dataService';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
+import { Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts';
 import './AnomalyDetection.css';
 
 interface AnomalyDetectionProps {
   data: FlowData[];
 }
-
-const COLORS = {
-  low: '#4caf50',
-  medium: '#ff9800',
-  high: '#f44336'
-};
 
 const ATTACK_COLORS = {
   'BENIGN': '#4caf50',

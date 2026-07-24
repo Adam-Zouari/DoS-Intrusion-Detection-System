@@ -3,8 +3,8 @@ import { FlowData, ProtocolDistribution, HostStats, AttackStats } from '../types
 // Re-export the types so they can be imported from this module
 export type { FlowData, ProtocolDistribution, HostStats, AttackStats };
 
-// Use the server API endpoint instead of direct file access
-const API_BASE_URL = 'http://localhost:5000/api';
+// Use a configurable API endpoint with a local-development default.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
 // For real-time data updates tracking
 let lastDataTimestamp: number | null = null;
@@ -73,7 +73,7 @@ export const subscribeToDataUpdates = (callback: (data: FlowData[]) => void): ()
   };
 };
 
-let pollingInterval: NodeJS.Timeout | null = null;
+let pollingInterval: ReturnType<typeof setInterval> | null = null;
 
 // Start polling for data updates
 const startPolling = () => {
@@ -103,7 +103,7 @@ export const processNetworkSummary = (data: FlowData[]) => {
   const totalConnections = data.length;
   let totalBytes = 0;
   let totalPackets = 0;
-  let attackCounts = {
+  const attackCounts = {
     BENIGN: 0,
     DoS: 0
   };
@@ -258,7 +258,7 @@ export const processAnomalies = (data: FlowData[]): AttackStats[] => {
   // Initialize with all attack types
   ['BENIGN','DoS'].forEach(type => {
     attackMap.set(type, {
-      attackType: type as any,
+      attackType: type,
       count: 0,
       relatedIPs: [],
       severity: type === 'BENIGN' ? 'low' : 'high'

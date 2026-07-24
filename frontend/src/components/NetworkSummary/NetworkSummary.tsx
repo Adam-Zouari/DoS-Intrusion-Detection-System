@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { FlowData } from '../../types/flowData';
 import { processNetworkSummary } from '../../services/dataService';
-import { PieChart, Pie, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
+import { PieChart, Pie, Tooltip, Legend, ResponsiveContainer, Cell } from 'recharts';
 import './NetworkSummary.css';
 
 interface NetworkSummaryProps {
@@ -31,17 +31,10 @@ const NetworkSummary: React.FC<NetworkSummaryProps> = ({ data }) => {
   // Add more colors for different attack types
   const ATTACK_COLORS = ['#FF8042', '#FF4560', '#775DD0', '#FEB019', '#00E396', '#008FFB', '#A300F3', '#FD6585'];
 
-  // Format time series data for chart
-  const timeData = useMemo(() => {
-    return summary.timeSeriesData
-      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-      .slice(-100); // Show last 100 data points to avoid overcrowding
-  }, [summary.timeSeriesData]);
-
   const attackCount = useMemo(() => {
     return Object.entries(summary.attackCounts)
       .filter(([type]) => type !== 'BENIGN')
-      .reduce((total, [_, count]) => total + count, 0);
+      .reduce((total, [, count]) => total + count, 0);
   }, [summary.attackCounts]);
 
   return (
@@ -88,7 +81,7 @@ const NetworkSummary: React.FC<NetworkSummaryProps> = ({ data }) => {
                   `${name}: ${(percent * 100).toFixed(1)}%` : null
                 }
               >
-                {protocolData.map((entry, index) => (
+                {protocolData.map((_, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
