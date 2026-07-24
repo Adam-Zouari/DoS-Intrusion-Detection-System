@@ -1,37 +1,58 @@
-<<<<<<< HEAD
-# Logs
-logs
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ML data and generated artifacts
+ml/data/raw/*
+!ml/data/raw/.gitkeep
+!ml/data/raw/README.md
+ml/data/processed/*
+!ml/data/processed/.gitkeep
+ml/models/*
+!ml/models/.gitkeep
+ml/reports/figures/*
+!ml/reports/figures/.gitkeep
+
+# Runtime data and local configuration
+runtime-data/*
+!runtime-data/.gitkeep
+config/config.local.json
 *.log
+
+# Node / Vite
+**/node_modules/
+**/dist/
+**/dist-ssr/
+*.local
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Package-manager logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
-*.local
-
-# Editor directories and files
+# Editors and operating systems
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 .DS_Store
+Thumbs.db
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
-# Json files
-package-lock.json
-package.json
-tsconfig.json
-tsconfig.node.json
-vite.config.ts
-eslint.config.js
-tsconfig.app.json
-
-Python_Server/file_monitor.log
-
