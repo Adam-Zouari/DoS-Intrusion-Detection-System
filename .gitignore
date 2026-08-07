@@ -21,6 +21,9 @@ ml/models/*
 !ml/models/.gitkeep
 ml/reports/figures/*
 !ml/reports/figures/.gitkeep
+ml/mlflow.db*
+ml/mlruns/
+/mlruns/
 
 # Runtime data and local configuration
 runtime-data/*

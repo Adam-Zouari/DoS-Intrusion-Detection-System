@@ -3,7 +3,7 @@ requires = ["setuptools>=69"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "dos-intrusion-detection-system"
+name = "intrusion-detection-system"
 version = "0.1.0"
 description = "CIC-IDS-2017 exploration and real-time network intrusion detection prototype"
 requires-python = ">=3.10"
@@ -11,9 +11,11 @@ dependencies = [
   "joblib>=1.3",
   "jupyterlab>=4.0",
   "matplotlib>=3.8",
+  "mlflow>=2.12",
   "numpy>=1.26",
   "pandas>=2.1",
-  "scikit-learn>=1.4",
+  "pyarrow>=14.0",
+  "scikit-learn>=1.7",
   "seaborn>=0.13",
   "watchdog>=4.0"
 ]
