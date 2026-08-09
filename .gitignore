@@ -21,6 +21,8 @@ ml/models/*
 !ml/models/.gitkeep
 ml/reports/figures/*
 !ml/reports/figures/.gitkeep
+ml/reports/generated/*
+!ml/reports/generated/.gitkeep
 ml/mlflow.db*
 ml/mlruns/
 /mlruns/
