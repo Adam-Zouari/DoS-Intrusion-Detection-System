@@ -21,17 +21,24 @@ All reusable experiment code lives under `src/ids_ml/`. Training commands and no
 |---|---|
 | `src/ids_ml/__init__.py` | Marks `ids_ml` as a Python package. It intentionally performs no imports or initialization, keeping package imports lightweight. |
 | `src/ids_ml/specs.py` | The single source of truth for experiment names, screening rounds, model families, feature sets, weighting modes, Protocol handling, candidate roles, and configuration keys. |
-| `src/ids_ml/data.py` | Locates and validates the cleaned parquet dataset; defines labels, feature exclusions, hashes, dataset and split contracts; recreates the fixed fit, validation, and protected-test partitions; and provides label encoding, class-preserving sampling, and weight helpers. |
+| `src/ids_ml/data.py` | Locates and validates the cleaned parquet dataset; defines labels, feature exclusions, hashes, dataset and split contracts; recreates the fixed fit, validation, and protected-test partitions; and provides label encoding, deterministic inner splits, class-preserving sampling, and weight helpers. |
 | `src/ids_ml/preprocessing.py` | Shared preprocessing for scikit-learn and tree pipelines: numeric transformation, fixed one-hot encoding of `Protocol`, transformed-schema validation, parameter extraction, and common fitted-pipeline cleanup. |
 | `src/ids_ml/evaluation.py` | Calculates the metrics defined in `ml/METRICS.md`, constructs per-class reports and confusion matrices, creates fixed timing inputs, measures complete-pipeline latency and throughput, and logs shared evaluation artifacts. |
 | `src/ids_ml/screening.py` | Implements the single MLflow validation lifecycle used by every model: create the run, log common metadata, fit, evaluate, time inference, log artifacts and diagnostics, handle cleanup, and return the result record. It also provides the common smoke-fit procedure. |
 | `src/ids_ml/baseline_models.py` | Defines the Dummy, SGD, Decision Tree, Random Forest, Histogram Gradient Boosting, and scikit-learn MLP baseline configurations and adapts them to the shared screening lifecycle. |
 | `src/ids_ml/tree_models.py` | Defines ExtraTrees, XGBoost, and LightGBM screening configurations, their weighting behavior, target encoding, and tree feature-importance artifacts. |
+| `src/ids_ml/tree_tuning/__init__.py` | Marks the tree-tuning directory as a package and preserves the public `tuning_main` import. |
+| `src/ids_ml/tree_tuning/search_space.py` | Defines the named XGBoost and LightGBM hyperparameter ranges, conditional Optuna suggestions, and validation of every resolved configuration. |
+| `src/ids_ml/tree_tuning/core.py` | Defines the 71-feature tuning contract, shared preprocessing, boosting callbacks, combined early stopping, XGBoost/LightGBM fitting, and complete CPU prediction wrapper. |
+| `src/ids_ml/tree_tuning/search.py` | Owns Optuna study storage and resumption, successful-trial counting, TPE study creation, tuning-run MLflow metadata, iteration artifacts, and the 20-trial search lifecycle. |
+| `src/ids_ml/tree_tuning/verification.py` | Refits top trials, evaluates the outer validation split, logs confusion matrices and importances, measures CPU inference, and performs the three-development-split stability check. |
+| `src/ids_ml/tree_tuning/cli.py` | Implements temporary smoke validation, generated tuning reports, argument parsing, and the installed `ids-tune-trees` command. |
+| `src/ids_ml/tree_tuning/README.md` | Explains the detailed ownership, dependency direction, and execution flow of every tree-tuning package file. |
 | `src/ids_ml/tracking.py` | Configures the local SQLite MLflow tracking URI and creates or selects experiments with the local artifact directory. |
 | `src/ids_ml/reporting.py` | Queries MLflow, normalizes current and legacy run records, selects compatible dataset/split contracts, removes duplicate configurations, builds coverage and leaderboard tables, compares feature and weighting choices, creates candidate shortlists, and downloads result artifacts. |
-| `src/ids_ml/workflows.py` | Implements the four installed commands. It parses filters, skips completed configurations, loads full data only when work remains, runs smoke checks, continues after isolated failures, invokes the shared screening lifecycle, and prints or saves leaderboards. |
+| `src/ids_ml/workflows.py` | Implements the four screening and result-inspection commands. It parses filters, skips completed configurations, loads full data only when work remains, runs smoke checks, continues after isolated failures, invokes the shared screening lifecycle, and prints or saves leaderboards. |
 | `src/ids_ml/neural/__init__.py` | Marks the neural implementation directory as a subpackage without triggering PyTorch or model-library imports. |
-| `src/ids_ml/neural/preprocessing.py` | Owns neural-only shared behavior: reproducible seeds, the leakage-safe inner stopping split, numeric scaling, Protocol conversion, mini-batch loaders, balanced loss weights, training-device selection, fit-result records, and memory cleanup. |
+| `src/ids_ml/neural/preprocessing.py` | Owns neural-only shared behavior: reproducible seeds, numeric scaling, Protocol conversion, mini-batch loaders, balanced loss weights, training-device selection, fit-result records, and memory cleanup. It consumes the shared leakage-safe inner-split contract from `data.py`. |
 | `src/ids_ml/neural/rtdl.py` | Implements the RTDL MLP, ResNet, and FT-Transformer training, macro-F1 epoch selection, full-fit refitting, CPU inference, and prediction batching. |
 | `src/ids_ml/neural/tabnet.py` | Implements TabNet training and refitting, its macro-F1 stopping metric, CPU prediction, and global and class-level attention summaries. |
 | `src/ids_ml/neural/experiments.py` | Connects the neural classifiers to the shared screening interface and logs selected epochs, training histories, timing details, and TabNet attention diagnostics. |
@@ -84,6 +91,35 @@ ids-run-trees --rerun
 
 Every full invocation prints the resulting leaderboard and writes an ignored CSV under `ml/reports/generated/`. A script returns a nonzero exit code when one of its requested configurations fails or remains incomplete.
 
+## Tune the selected boosting challengers
+
+The tuning workflow uses the balanced 71-feature configurations selected during screening. XGBoost trains with CUDA; the installed LightGBM build trains deterministically on CPU. Optuna state is stored in ignored `ml/optuna.db` files, so interrupted studies can resume without repeating successful trials.
+
+First validate both model paths without starting the full studies:
+
+```powershell
+ids-tune-trees search --smoke-only
+```
+
+Run or resume up to 20 successful TPE trials per model:
+
+```powershell
+ids-tune-trees search --target-trials 20
+ids-tune-trees search --models xgboost --target-trials 20
+ids-tune-trees search --models lightgbm --target-trials 20
+```
+
+`--target-trials` is a total, not an additional count. Repeating the first command after 12 successful trials runs only the trials still needed to reach 20. Failed trials do not count toward that target.
+
+After both studies contain at least three successful trials, verify their top configurations on the outer validation split and run the selected configuration across development-split seeds 42, 123, and 2025:
+
+```powershell
+ids-tune-trees verify
+ids-tune-trees report
+```
+
+The search objective is inner-validation macro F1. Per-iteration training-monitor log loss, inner-validation log loss, macro F1, and iteration duration are stored as MLflow artifacts. The protected test partition is never scored by these commands.
+
 ## Inspect results
 
 Show the latest successful configuration for each requested model setup directly in the terminal:
@@ -111,6 +147,8 @@ mlflow ui --backend-store-uri sqlite:///ml/mlflow.db
 ```
 
 The SQLite database and artifacts remain local and ignored by Git. Per-class reports, confusion matrices, tree importances, and neural training histories are stored with their MLflow runs.
+
+The tuning and verification runs appear in the separate MLflow experiments `cicids2017-tree-tuning` and `cicids2017-tree-tuning-verification`. Optuna decides which parameters to try; MLflow remains the authoritative record of metrics and artifacts for each completed fit.
 
 ## Test-set protection
 

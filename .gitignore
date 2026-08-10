@@ -24,6 +24,7 @@ ml/reports/figures/*
 ml/reports/generated/*
 !ml/reports/generated/.gitkeep
 ml/mlflow.db*
+ml/optuna.db*
 ml/mlruns/
 /mlruns/
 

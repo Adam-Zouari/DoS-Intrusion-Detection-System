@@ -112,7 +112,7 @@ def _weighting_mechanism(spec: ExperimentSpec) -> str:
     return "balanced_sample_weight"
 
 
-def _log_tree_importance(
+def log_tree_importance(
     feature_names: np.ndarray,
     importances: np.ndarray,
     model_family: str,
@@ -183,7 +183,7 @@ class TreeAdapter(OneHotPipelineAdapterBase):
         return decode_labels(np.asarray(self.pipeline.predict(X), dtype=np.int64))
 
     def log_diagnostics(self, X: pd.DataFrame, y: pd.Series) -> None:
-        _log_tree_importance(
+        log_tree_importance(
             self.transformed_names,
             self.pipeline.named_steps["classifier"].feature_importances_,
             self.spec.model_family,

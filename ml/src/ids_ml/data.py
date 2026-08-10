@@ -112,6 +112,16 @@ class ExperimentData:
     contract: DatasetContract
 
 
+@dataclass(frozen=True)
+class InnerSplit:
+    """Positions and fingerprints for a stratified holdout within fitting data."""
+
+    training_positions: np.ndarray
+    stopping_positions: np.ndarray
+    training_fingerprint: str
+    stopping_fingerprint: str
+
+
 def find_project_root() -> Path:
     for candidate in [Path.cwd(), *Path.cwd().parents]:
         if (candidate / "pyproject.toml").exists() and (candidate / "ml").is_dir():
@@ -182,6 +192,39 @@ def balanced_sample_weights(labels: pd.Series | np.ndarray) -> np.ndarray:
     if len(weights) != len(labels):
         raise AssertionError("Sample weights do not match the fitting labels.")
     return weights
+
+
+def make_inner_split(
+    labels: pd.Series,
+    test_size: float = INNER_STOPPING_SIZE,
+    random_state: int = RANDOM_STATE,
+) -> InnerSplit:
+    """Create a deterministic class-preserving split without touching outer data."""
+
+    all_positions = np.arange(len(labels), dtype=np.int64)
+    training_positions, stopping_positions = train_test_split(
+        all_positions,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=labels,
+    )
+    training_index = labels.index[training_positions]
+    stopping_index = labels.index[stopping_positions]
+    if not training_index.intersection(stopping_index).empty:
+        raise AssertionError("Inner training and stopping rows overlap.")
+    for name, target in {
+        "inner training": labels.iloc[training_positions],
+        "inner stopping": labels.iloc[stopping_positions],
+    }.items():
+        missing = set(LABEL_ORDER) - set(target.unique())
+        if missing:
+            raise AssertionError(f"{name} is missing labels: {sorted(missing)}")
+    return InnerSplit(
+        training_positions=training_positions,
+        stopping_positions=stopping_positions,
+        training_fingerprint=index_fingerprint(training_index),
+        stopping_fingerprint=index_fingerprint(stopping_index),
+    )
 
 
 def load_experiment_data(

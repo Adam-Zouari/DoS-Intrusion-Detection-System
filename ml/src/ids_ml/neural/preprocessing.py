@@ -8,30 +8,21 @@ from dataclasses import dataclass
 import numpy as np
 import pandas as pd
 import torch
-from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from sklearn.utils.class_weight import compute_class_weight
 from torch.utils.data import DataLoader, TensorDataset
 
 from ..data import (
     EXPECTED_PROTOCOL_VALUES,
-    INNER_STOPPING_SIZE,
+    InnerSplit,
     LABEL_ORDER,
     RANDOM_STATE,
-    index_fingerprint,
+    make_inner_split as make_shared_inner_split,
 )
 
 MAX_EPOCHS = 50
 EARLY_STOPPING_PATIENCE = 5
 INFERENCE_BATCH_SIZE = 8_192
-
-
-@dataclass(frozen=True)
-class InnerSplit:
-    training_positions: np.ndarray
-    stopping_positions: np.ndarray
-    training_fingerprint: str
-    stopping_fingerprint: str
 
 
 @dataclass
@@ -54,30 +45,7 @@ def set_reproducible_seed(seed: int = RANDOM_STATE) -> None:
 
 
 def make_inner_split(y_fit: pd.Series) -> InnerSplit:
-    all_positions = np.arange(len(y_fit), dtype=np.int64)
-    training_positions, stopping_positions = train_test_split(
-        all_positions,
-        test_size=INNER_STOPPING_SIZE,
-        random_state=RANDOM_STATE,
-        stratify=y_fit,
-    )
-    training_index = y_fit.index[training_positions]
-    stopping_index = y_fit.index[stopping_positions]
-    if not training_index.intersection(stopping_index).empty:
-        raise AssertionError("Neural training and stopping rows overlap.")
-    for name, target in {
-        "inner training": y_fit.iloc[training_positions],
-        "inner stopping": y_fit.iloc[stopping_positions],
-    }.items():
-        missing = set(LABEL_ORDER) - set(target.unique())
-        if missing:
-            raise AssertionError(f"{name} is missing labels: {sorted(missing)}")
-    return InnerSplit(
-        training_positions=training_positions,
-        stopping_positions=stopping_positions,
-        training_fingerprint=index_fingerprint(training_index),
-        stopping_fingerprint=index_fingerprint(stopping_index),
-    )
+    return make_shared_inner_split(y_fit)
 
 
 class NeuralPreprocessor:

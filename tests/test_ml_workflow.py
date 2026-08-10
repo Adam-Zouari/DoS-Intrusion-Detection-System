@@ -14,7 +14,7 @@ try:
 except ModuleNotFoundError:  # Python 3.10
     import tomli as tomllib
 
-from ids_ml.data import LABEL_ORDER, transformed_feature_count
+from ids_ml.data import LABEL_ORDER, make_inner_split, transformed_feature_count
 from ids_ml.evaluation import calculate_metrics_and_diagnostics
 from ids_ml.reporting import (
     filter_to_contract,
@@ -35,6 +35,17 @@ from ids_ml.workflows import (
     show_results_main,
     tree_main,
 )
+from ids_ml.tree_tuning.core import (
+    IterationMonitor,
+    base_parameters,
+)
+from ids_ml.tree_tuning.search_space import (
+    suggest_parameters,
+    validate_resolved_parameters,
+)
+from ids_ml.tree_tuning.search import optimize_to_target, top_complete_trials
+from ids_ml.tree_tuning.cli import tuning_main
+import optuna
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -264,14 +275,110 @@ def test_pyproject_exposes_the_expected_commands() -> None:
         "ids-run-trees": "ids_ml.workflows:tree_main",
         "ids-run-neural": "ids_ml.workflows:neural_main",
         "ids-show-results": "ids_ml.workflows:show_results_main",
+        "ids-tune-trees": "ids_ml.tree_tuning.cli:tuning_main",
     }
 
 
 @pytest.mark.parametrize(
     "command_main",
-    [baseline_main, tree_main, neural_main, show_results_main],
+    [baseline_main, tree_main, neural_main, show_results_main, tuning_main],
 )
 def test_command_help_does_not_load_the_dataset(command_main) -> None:
     with pytest.raises(SystemExit) as exit_info:
         command_main(["--help"])
     assert exit_info.value.code == 0
+
+
+def test_tuning_inner_split_is_deterministic_and_class_preserving() -> None:
+    labels = pd.Series(
+        np.repeat(LABEL_ORDER, 20), index=np.arange(10_000, 10_300)
+    )
+    first = make_inner_split(labels)
+    second = make_inner_split(labels)
+    assert np.array_equal(first.training_positions, second.training_positions)
+    assert np.array_equal(first.stopping_positions, second.stopping_positions)
+    assert first.training_fingerprint == second.training_fingerprint
+    assert first.stopping_fingerprint == second.stopping_fingerprint
+    assert set(labels.iloc[first.training_positions]) == set(LABEL_ORDER)
+    assert set(labels.iloc[first.stopping_positions]) == set(LABEL_ORDER)
+
+
+def test_tuning_search_spaces_resolve_valid_conditional_parameters() -> None:
+    common = {
+        "learning_rate": 0.05,
+        "subsample": 0.8,
+        "colsample_bytree": 0.75,
+        "reg_lambda": 1.0,
+        "reg_alpha_mode": "zero",
+    }
+    xgboost_params = suggest_parameters(
+        optuna.trial.FixedTrial(
+            {
+                **common,
+                "max_depth": 8,
+                "min_child_weight": 3.0,
+                "gamma": 0.2,
+            }
+        ),
+        "xgboost",
+    )
+    lightgbm_params = suggest_parameters(
+        optuna.trial.FixedTrial(
+            {
+                **common,
+                "max_depth": 6,
+                "num_leaves_depth_6": 63,
+                "min_child_samples": 50,
+                "min_split_gain": 0.1,
+            }
+        ),
+        "lightgbm",
+    )
+    validate_resolved_parameters("xgboost", xgboost_params)
+    validate_resolved_parameters("lightgbm", lightgbm_params)
+    assert lightgbm_params["num_leaves"] <= 2 ** lightgbm_params["max_depth"]
+    assert base_parameters("xgboost")["device"] == "cuda"
+    assert base_parameters("lightgbm")["device_type"] == "cpu"
+
+
+def test_tuning_target_counts_only_successful_trials_and_resumes() -> None:
+    study = optuna.create_study(direction="maximize")
+
+    def objective(trial):
+        return float(trial.number)
+
+    attempts, completed = optimize_to_target(study, objective, 2)
+    assert (attempts, completed) == (2, 2)
+    attempts, completed = optimize_to_target(study, objective, 2)
+    assert (attempts, completed) == (0, 2)
+    attempts, completed = optimize_to_target(study, objective, 3)
+    assert (attempts, completed) == (1, 3)
+    assert [trial.number for trial in top_complete_trials(study, 2)] == [2, 1]
+
+
+def test_combined_early_stopping_keeps_absolute_best_iterations() -> None:
+    monitor = IterationMonitor(patience=2, macro_min_delta=0.01, loss_min_delta=0.01)
+    assert not monitor.record(0, 1.0, 1.0, 0.50)
+    assert not monitor.record(1, 0.9, 0.995, 0.505)
+    assert monitor.record(2, 0.8, 0.994, 0.506)
+    assert monitor.best_macro_iteration == 3
+    assert monitor.best_loss_iteration == 3
+    assert list(monitor.history().columns) == [
+        "training_monitor_log_loss",
+        "inner_validation_log_loss",
+        "inner_validation_macro_f1",
+        "iteration_time_seconds",
+    ]
+
+
+def test_tuning_source_never_scores_or_predicts_on_protected_test() -> None:
+    tuning_directory = (
+        PROJECT_ROOT / "ml" / "src" / "ids_ml" / "tree_tuning"
+    )
+    source = "\n".join(
+        path.read_text(encoding="utf-8")
+        for path in sorted(tuning_directory.glob("*.py"))
+    )
+    assert "predict(data.X_test" not in source
+    assert "predictor.predict(data.X_test" not in source
+    assert "PCA" not in source

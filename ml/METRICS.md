@@ -177,3 +177,24 @@ Log scalar values with these exact names:
 | Serialized finalist pipeline size in MiB | `model_size_mib` |
 
 Log the complete per-class precision, recall, F1, and support report as an MLflow artifact. Log both the raw and row-normalized confusion matrices as MLflow artifacts for every evaluated model. The scalar `macro_f1` remains the only metric used for primary model selection.
+
+## Boosting-tuning diagnostics
+
+The XGBoost and LightGBM tuning studies also record the following diagnostics. They explain training behavior and early stopping; they do not replace macro F1 as the sole optimization and model-selection metric.
+
+| Measurement | MLflow name or artifact column |
+|---|---|
+| Optuna objective at the retained iteration | `tuning_objective_macro_f1` |
+| Inner-validation multiclass log loss at the retained iteration | `inner_validation_log_loss` |
+| Lowest observed inner-validation multiclass log loss | `best_validation_log_loss` |
+| Training-monitor multiclass log loss at the retained iteration | `training_monitor_log_loss` |
+| Booster-only fitting time, excluding the shared preprocessing fit | `booster_training_time_seconds` |
+| Iteration with the highest inner-validation macro F1 | `best_macro_iteration` |
+| Iteration with the lowest inner-validation log loss | `best_loss_iteration` |
+| Fixed iteration count used for a verification refit | `selected_boosting_iterations` |
+| Per-iteration inner-validation macro F1 | `inner_validation_macro_f1` in `tuning/iteration_history.csv` |
+| Per-iteration inner-validation log loss | `inner_validation_log_loss` in `tuning/iteration_history.csv` |
+| Per-iteration training-monitor log loss | `training_monitor_log_loss` in `tuning/iteration_history.csv` |
+| Per-iteration elapsed time | `iteration_time_seconds` in `tuning/iteration_history.csv` |
+
+The training-monitor sample is selected reproducibly from inner-training rows. It is never used to select parameters. Early-stopping patience resets when either inner-validation macro F1 improves by at least `1e-4` or inner-validation log loss decreases by at least `1e-5`. The retained model iteration is always the iteration with the highest observed inner-validation macro F1; the best-loss iteration is saved only as a diagnostic comparison.
