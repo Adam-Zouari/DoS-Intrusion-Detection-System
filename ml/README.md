@@ -47,6 +47,22 @@ python -m pip install -e ".[dev]"
 
 Editable installation makes the `ids_ml` package available to scripts and notebook kernels while keeping source edits immediately visible.
 
+### NVIDIA GPU setup
+
+On a CUDA-capable Windows machine, install the official CUDA build of PyTorch after the editable project installation:
+
+```powershell
+python -m pip install --force-reinstall -r ml/requirements-gpu.txt
+```
+
+The separate requirements file is necessary because standard project dependencies cannot declare pip's PyTorch CUDA package index. Verify the environment before neural screening:
+
+```powershell
+python -c "import torch; print(torch.__version__); print(torch.cuda.is_available()); print(torch.cuda.get_device_name(0))"
+```
+
+Neural training automatically uses CUDA when available. Inference latency and throughput are still measured on CPU for a consistent deployment comparison.
+
 ## Run experiments
 
 Each experiment command smoke-fits model families that are about to run. Successful configurations already stored for the same dataset and split fingerprints are skipped unless `--rerun` is supplied.

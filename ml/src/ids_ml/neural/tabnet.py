@@ -110,6 +110,20 @@ class TabNetFlowClassifier(NeuralResourceOwner):
         history.index = pd.RangeIndex(1, len(history) + 1, name="epoch")
         return history
 
+    @staticmethod
+    def _move_model_to_device(
+        model: TabNetClassifier, device: torch.device
+    ) -> None:
+        """Move parameters and TabNet's unregistered attention tensors."""
+        model.network.to(device)
+        for module in model.network.modules():
+            for name, value in vars(module).items():
+                if isinstance(value, torch.Tensor):
+                    setattr(module, name, value.to(device))
+        if isinstance(getattr(model, "group_matrix", None), torch.Tensor):
+            model.group_matrix = model.group_matrix.to(device)
+        model.device = device
+
     def fit_with_inner_selection(
         self, X: pd.DataFrame, y: pd.Series, inner_split: InnerSplit
     ) -> NeuralFitResult:
@@ -169,8 +183,7 @@ class TabNetFlowClassifier(NeuralResourceOwner):
         )
         final_refit_time = perf_counter() - final_training_start
         final_history = self._history_frame(self.model)
-        self.model.network.to("cpu")
-        self.model.device = torch.device("cpu")
+        self._move_model_to_device(self.model, torch.device("cpu"))
         self.training_device = torch.device("cpu")
         del X_final, y_encoded
         release_torch_memory()
