@@ -1,6 +1,6 @@
 # `ids_ml` source package
 
-The installable `ids_ml` package owns reusable data contracts, preprocessing, model definitions, experiment execution, reporting, tuning, and guarded finalization. Notebooks use the package rather than redefining training logic.
+The installable `ids_ml` package owns reusable data contracts, preprocessing, model definitions, experiment execution, reporting, tuning, and guarded finalization. Notebooks use the package rather than redefining training logic. Runtime serving belongs to the separate [`ids_backend`](../../../backend/README.md) package.
 
 ## Shared modules
 
@@ -11,6 +11,7 @@ The installable `ids_ml` package owns reusable data contracts, preprocessing, mo
 | `data.py` | Validates the cleaned dataset, defines labels and feature exclusions, recreates fixed partitions, calculates fingerprints, encodes labels, samples classes, and derives fitting-only weights. |
 | `preprocessing.py` | Builds shared feature selection and fixed one-hot `Protocol` preprocessing for scikit-learn and tree pipelines. |
 | `evaluation.py` | Calculates documented metrics, creates class reports and confusion matrices, measures complete-pipeline CPU inference, and logs evaluation artifacts. |
+| `plotting.py` | Selects one headless-safe Matplotlib backend for every generated experiment figure. |
 | `tracking.py` | Configures the local SQLite MLflow backend and artifact root. |
 | `screening.py` | Runs the shared MLflow fit/evaluate lifecycle and smoke-fit procedure. |
 | `reporting.py` | Queries compatible MLflow runs and builds coverage, leaderboard, comparison, shortlist, and artifact views. |

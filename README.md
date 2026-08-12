@@ -1,6 +1,6 @@
 # Intrusion Detection System
 
-An end-to-end machine-learning research project for multiclass network-intrusion detection using the official CIC-IDS-2017 flow dataset. The repository documents the full path from raw-data inspection to a frozen XGBoost recipe and one protected-test evaluation.
+An end-to-end multiclass network-intrusion detection project using the official CIC-IDS-2017 flow dataset. It includes the complete research path from raw-data inspection to one protected-test evaluation, plus a local application that serves the frozen XGBoost pipeline and classifies completed flows immediately.
 
 The final model achieved:
 
@@ -22,7 +22,8 @@ The project is intended to be read in this order:
 5. [Results](ml/RESULTS.md) follows the evidence from screening through tuning, stability checks, model selection, and final testing.
 6. [Frozen model specification](ml/final_model_spec.json) records the selected preprocessing and XGBoost recipe.
 7. [ML implementation guide](ml/src/ids_ml/README.md) explains the reusable package structure.
-8. [Test guide](tests/README.md) explains the data-free validation suite.
+8. [Application guide](docs/APPLICATION.md) explains the inference API, replay generator, persistence, and dashboard.
+9. [Test guide](tests/README.md) explains the data-free validation suite.
 
 ```text
 Merged CIC-IDS-2017 CSV
@@ -43,6 +44,8 @@ The detailed [machine-learning workflow guide](ml/README.md) gives the environme
 
 The committed notebooks retain their outputs, and [published result artifacts](ml/reports/published/README.md) expose the final diagnostics without requiring the local tracking database.
 
+The [application guide](docs/APPLICATION.md) is the entry point for running the frozen model through the local FastAPI and React application.
+
 ## Repository layout
 
 ```text
@@ -57,22 +60,30 @@ The committed notebooks retain their outputs, and [published result artifacts](m
 |   |   |-- 01_data_exploration.ipynb
 |   |   |-- 02_feature_engineering.ipynb
 |   |   `-- 03_model_screening_analysis.ipynb
-|   |-- src/ids_ml/                # Installable experiment package
+|   |-- src/ids_ml/                # Model-development package
 |   |-- reports/published/         # Versioned final diagnostic evidence
 |   |-- models/                    # Ignored local model artifacts
 |   `-- archive/                   # Historical notebooks and legacy experiments
+|-- backend/                       # FastAPI, model inference, and SQLite runtime
+|   `-- src/ids_backend/
+|-- tools/                         # Synthetic completed-flow replay utility
+|   `-- src/ids_tools/
 |-- tests/                         # Synthetic and repository-contract tests
-|-- inference/                     # Legacy binary inference prototype
-|-- api/                           # Legacy dashboard API
-|-- frontend/                      # Legacy React dashboard
-|-- docs/LEGACY_APPLICATION.md     # Prototype status and data flow
+|-- frontend/                      # React flow dashboard
+|-- docs/APPLICATION.md            # Application architecture and commands
 |-- pyproject.toml
 `-- LICENSE
 ```
 
-## Legacy application prototype
+## Flow-level application
 
-The `inference/`, `api/`, and `frontend/` folders belong to an older binary `BENIGN`/`DoS` prototype. They are retained as application-design evidence but are **not connected to the final 15-class XGBoost pipeline**. See [Legacy application prototype](docs/LEGACY_APPLICATION.md) before running or presenting these components.
+The former CSV watcher and Node API have been replaced by one Python serving path using the final 15-class pipeline. A synthetic producer replays cleaned dataset rows one flow at a time, while FastAPI validates and predicts, SQLite stores results, Server-Sent Events publish updates, and React displays backend-calculated statistics.
+
+```text
+Cleaned flow row -> FastAPI -> final XGBoost pipeline -> SQLite -> live dashboard
+```
+
+See the [application guide](docs/APPLICATION.md) for setup and commands. The replay source is clearly identified in the interface and can later be replaced by CICFlowMeter sending the same flat flow contract.
 
 ## Tests
 
@@ -83,7 +94,7 @@ Run the data-free test suite locally:
 python -m pytest -q
 ```
 
-GitHub Actions runs the same tests on a clean hosted environment after pushes and pull requests. CI does not download the dataset, train models, use a GPU, or access the protected test set.
+GitHub Actions runs the Python tests and compilation checks plus the dashboard lint and production build on a clean hosted environment after pushes and pull requests. CI does not download the dataset, train models, use a GPU, or access the protected test set.
 
 ## License and attribution
 

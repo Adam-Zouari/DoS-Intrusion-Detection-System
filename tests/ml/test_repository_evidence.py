@@ -22,7 +22,9 @@ FINAL_ACCURACY = 0.9994937614058564
 def test_documented_local_links_resolve() -> None:
     documents = [
         PROJECT_ROOT / "README.md",
-        PROJECT_ROOT / "docs" / "LEGACY_APPLICATION.md",
+        PROJECT_ROOT / "docs" / "APPLICATION.md",
+        PROJECT_ROOT / "backend" / "README.md",
+        PROJECT_ROOT / "tools" / "README.md",
         PROJECT_ROOT / "ml" / "README.md",
         PROJECT_ROOT / "ml" / "DATASET.md",
         PROJECT_ROOT / "ml" / "RESULTS.md",

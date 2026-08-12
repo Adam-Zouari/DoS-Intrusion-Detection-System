@@ -175,6 +175,6 @@ Importance is a diagnostic of how often and how strongly the fitted trees used a
 
 This result demonstrates excellent performance and strong CPU inference characteristics on the fixed random stratified CIC-IDS-2017 benchmark. It does not establish equivalent behavior on another network, capture period, CICFlowMeter version, or attack distribution. Dataset-specific port, host, or attack-session patterns may make the benchmark easier than a real deployment.
 
-The legacy binary inference service is not connected to this pipeline. Production deployment and external-dataset validation remain separate work.
+The local application now loads this frozen pipeline and performs immediate completed-flow inference. Its current producer replays cleaned CIC-IDS-2017 rows; direct capture integration and external-dataset validation remain separate work.
 
 The protected-test result is final. It must be reported as observed and must not be used to start another tuning round.

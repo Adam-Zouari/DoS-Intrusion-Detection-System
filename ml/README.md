@@ -160,6 +160,10 @@ The published project has already completed this step. Its result is final and m
 
 [RESULTS.md](RESULTS.md) explains the actual decisions using the recorded baseline, tree, neural, tuning, stability, and protected-test results. The selected final diagnostic CSV and PNG artifacts are available in [reports/published](reports/published/README.md) without the local MLflow database.
 
+## Continue to the application
+
+Model development ends after the frozen pipeline and protected-test result are produced. Runtime serving is owned by the separate [`ids_backend`](../backend/README.md) package, while the temporary replay producer belongs to [`ids_tools`](../tools/README.md). See the [application guide](../docs/APPLICATION.md) for the flow contract, setup, endpoints, and execution commands.
+
 For ad-hoc inspection when local tracking state is available:
 
 ```powershell
