@@ -1,5 +1,3 @@
-html, body {
-  height: 100%;
-  margin: 0;
-  overflow: hidden; /* Prevent scrolling */
-}
+html { min-height: 100%; }
+body { min-height: 100%; }
+#root { min-height: 100vh; }
