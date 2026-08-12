@@ -1,4 +1,4 @@
-# Raw data
+# Raw dataset location
 
 Place the original merged CIC-IDS-2017 CSV here as:
 
@@ -6,5 +6,4 @@ Place the original merged CIC-IDS-2017 CSV here as:
 cicids2017_merged.csv
 ```
 
-Treat this file as immutable. Do not clean or overwrite it in place. Large
-dataset files in this directory are ignored by Git.
+Treat the file as immutable. Do not clean, overwrite, or commit it. See the [dataset and feature reference](../../DATASET.md) for provenance and column meanings.

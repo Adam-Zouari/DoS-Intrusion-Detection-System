@@ -1,127 +1,92 @@
-# DoS Intrusion Detection System
+# Intrusion Detection System
 
-A research and prototype application for exploring CIC-IDS-2017, comparing
-intrusion-detection models, processing CICFlowMeter output, and visualizing
-network activity.
+An end-to-end machine-learning research project for multiclass network-intrusion detection using the official CIC-IDS-2017 flow dataset. The repository documents the full path from raw-data inspection to a frozen XGBoost recipe and one protected-test evaluation.
 
-The machine-learning work is being rebuilt around the original merged
-CIC-IDS-2017 dataset. The previously collected local training data has been
-removed.
+The final model achieved:
+
+- **0.9602 macro F1** across 15 classes;
+- **99.991% binary attack recall**;
+- **13.31 ms CPU p99 complete-pipeline latency**; and
+- approximately **51,090 flows per second** in the recorded batch-throughput test.
+
+See the [complete results and decision record](ml/RESULTS.md) for baseline comparisons, tuning evidence, class-level results, and limitations.
+
+## Review the project
+
+The project is intended to be read in this order:
+
+1. [Dataset and feature reference](ml/DATASET.md) explains CIC-IDS-2017, CICFlowMeter flows, and every source column.
+2. [Data exploration](ml/notebooks/01_data_exploration.ipynb) investigates and cleans the merged raw dataset.
+3. [Feature engineering](ml/notebooks/02_feature_engineering.ipynb) defines eligible features, creates the protected split, and records feature-selection diagnostics.
+4. [Model screening analysis](ml/notebooks/03_model_screening_analysis.ipynb) compares the completed baseline and tree rounds and the eight completed neural configurations.
+5. [Results](ml/RESULTS.md) follows the evidence from screening through tuning, stability checks, model selection, and final testing.
+6. [Frozen model specification](ml/final_model_spec.json) records the selected preprocessing and XGBoost recipe.
+7. [ML implementation guide](ml/src/ids_ml/README.md) explains the reusable package structure.
+8. [Test guide](tests/README.md) explains the data-free validation suite.
+
+```text
+Merged CIC-IDS-2017 CSV
+    -> exploration and cleaning
+    -> cleaned Parquet dataset
+    -> feature preparation and protected split
+    -> baseline, tree, and neural screening
+    -> XGBoost and LightGBM tuning
+    -> outer-validation selection
+    -> frozen XGBoost recipe
+    -> complete 80% development refit
+    -> one protected 20% test evaluation
+```
+
+## Reproduce the work
+
+The detailed [machine-learning workflow guide](ml/README.md) gives the environment setup and commands in execution order. The raw and processed datasets, local MLflow and Optuna stores, generated reports, and model binaries are intentionally excluded from Git.
+
+The committed notebooks retain their outputs, and [published result artifacts](ml/reports/published/README.md) expose the final diagnostics without requiring the local tracking database.
 
 ## Repository layout
 
 ```text
 .
-├── ml/
-│   ├── data/
-│   │   ├── raw/                 # Immutable local source data
-│   │   └── processed/           # Generated cleaned/transformed data
-│   ├── notebooks/
-│   │   └── 01_data_exploration.ipynb
-│   ├── src/                     # Reusable ML code extracted later
-│   ├── models/                  # Generated model pipelines
-│   ├── reports/
-│   │   └── figures/
-│   └── archive/
-│       └── legacy/              # Previous experiment, reference only
-├── inference/
-│   └── back.py                  # CICFlowMeter file-processing prototype
-├── api/                         # Node.js dashboard API
-├── frontend/                    # React/Vite dashboard
-├── config/
-│   ├── config.example.json
-│   └── config.local.json        # Local-only; ignored by Git
-├── runtime-data/                # Generated analyzed flow data and logs
-├── tests/
-├── pyproject.toml
-├── LICENSE
-└── NOTICE
+|-- ml/
+|   |-- DATASET.md                 # Dataset provenance and feature dictionary
+|   |-- METRICS.md                 # Evaluation metric definitions
+|   |-- RESULTS.md                 # Decision evidence and final results
+|   |-- final_model_spec.json      # Frozen final XGBoost recipe
+|   |-- data/                      # Ignored raw and processed datasets
+|   |-- notebooks/
+|   |   |-- 01_data_exploration.ipynb
+|   |   |-- 02_feature_engineering.ipynb
+|   |   `-- 03_model_screening_analysis.ipynb
+|   |-- src/ids_ml/                # Installable experiment package
+|   |-- reports/published/         # Versioned final diagnostic evidence
+|   |-- models/                    # Ignored local model artifacts
+|   `-- archive/                   # Historical notebooks and legacy experiments
+|-- tests/                         # Synthetic and repository-contract tests
+|-- inference/                     # Legacy binary inference prototype
+|-- api/                           # Legacy dashboard API
+|-- frontend/                      # Legacy React dashboard
+|-- docs/LEGACY_APPLICATION.md     # Prototype status and data flow
+|-- pyproject.toml
+`-- LICENSE
 ```
 
-## Machine-learning workflow
+## Legacy application prototype
 
-Place the original merged dataset at:
+The `inference/`, `api/`, and `frontend/` folders belong to an older binary `BENIGN`/`DoS` prototype. They are retained as application-design evidence but are **not connected to the final 15-class XGBoost pipeline**. See [Legacy application prototype](docs/LEGACY_APPLICATION.md) before running or presenting these components.
 
-```text
-ml/data/raw/cicids2017_merged.csv
-```
+## Tests
 
-The raw dataset is intentionally ignored by Git and should never be overwritten
-by a notebook. Generated datasets belong in `ml/data/processed/`.
-
-The current starting point is:
-
-```text
-ml/notebooks/01_data_exploration.ipynb
-```
-
-The first notebook is intentionally minimal. It should investigate dataset
-shape, dates, labels, missing/infinite values, duplicates, class imbalance, and
-feature distributions before preprocessing decisions are introduced.
-
-The files under `ml/archive/legacy/` are not part of the new workflow.
-
-### Python environment
+Run the data-free test suite locally:
 
 ```powershell
-python -m venv .venv
 .\.venv\Scripts\Activate.ps1
-python -m pip install -e .
-jupyter lab ml/notebooks
+python -m pytest -q
 ```
 
-## Inference prototype
+GitHub Actions runs the same tests on a clean hosted environment after pushes and pull requests. CI does not download the dataset, train models, use a GPU, or access the protected test set.
 
-Copy the example configuration and update the paths:
-
-```powershell
-Copy-Item config\config.example.json config\config.local.json
-python inference\back.py
-```
-
-`IDS_CONFIG_PATH` can point to a different configuration file.
-
-The inference service is retained from the previous binary prototype. It must
-be updated to consume the final multiclass preprocessing/model pipeline before
-its predictions can be treated as part of the new experiment.
-
-## Dashboard API
-
-```powershell
-cd api
-npm install
-npm run dev
-```
-
-The API defaults to `http://localhost:5000` and reads analyzed CSV files from
-`runtime-data/analyzed`. Override this using `DATA_DIRECTORY`.
-
-## Frontend
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
-
-The dashboard defaults to `http://localhost:5173`. Copy `.env.example` to
-`.env.local` to override the API URL.
-
-## Data and generated artifacts
-
-The following are local/generated and are not committed:
-
-- CIC-IDS-2017 CSV files
-- processed datasets
-- trained model artifacts
-- runtime flow data
-- logs
-- local configuration and environment files
-
-## License
+## License and attribution
 
 Copyright © 2026 Adam Zouari.
 
-The source code is licensed under the Apache License 2.0. See [LICENSE](LICENSE)
-and [NOTICE](NOTICE). CIC-IDS-2017 remains subject to its dataset terms and
-should be cited separately in research outputs.
+The source code is licensed under the [Apache License 2.0](LICENSE). CIC-IDS-2017 is not covered by this repository's license and should be cited separately; see [ml/DATASET.md](ml/DATASET.md).
