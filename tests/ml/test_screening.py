@@ -237,7 +237,12 @@ def test_multiclass_metric_calculation_is_exact_for_perfect_predictions() -> Non
 
 
 def test_comparison_notebook_is_read_only_and_compiles() -> None:
-    notebook_path = PROJECT_ROOT / "ml" / "notebooks" / "03_model_comparison.ipynb"
+    notebook_path = (
+        PROJECT_ROOT
+        / "ml"
+        / "notebooks"
+        / "03_model_screening_analysis.ipynb"
+    )
     notebook = json.loads(notebook_path.read_text(encoding="utf-8"))
     cell_ids = [cell["id"] for cell in notebook["cells"]]
     assert len(cell_ids) == len(set(cell_ids))
@@ -276,5 +281,4 @@ def test_command_help_does_not_load_the_dataset(command_main) -> None:
     with pytest.raises(SystemExit) as exit_info:
         command_main(["--help"])
     assert exit_info.value.code == 0
-
 
