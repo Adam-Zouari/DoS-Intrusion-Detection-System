@@ -6,7 +6,6 @@ import tempfile
 from pathlib import Path
 
 import lightgbm
-import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import pandas as pd
@@ -17,6 +16,8 @@ from sklearn.ensemble import ExtraTreesClassifier
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from xgboost import XGBClassifier
+
+from .plotting import plt
 
 from .data import (
     LABEL_ORDER,

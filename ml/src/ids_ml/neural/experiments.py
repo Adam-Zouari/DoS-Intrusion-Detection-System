@@ -6,7 +6,6 @@ import importlib.metadata
 import tempfile
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import pandas as pd
@@ -15,6 +14,7 @@ from ..data import RANDOM_STATE, class_preserving_sample, decode_labels
 from ..evaluation import log_line_figure, log_table_artifact
 from ..screening import AdapterMetadata, FitDetails
 from ..experiment_specs import ExperimentSpec
+from ..plotting import plt
 from .preprocessing import NeuralFitResult, make_inner_split
 from .rtdl import RTDLFlowClassifier
 from .tabnet import TabNetFlowClassifier

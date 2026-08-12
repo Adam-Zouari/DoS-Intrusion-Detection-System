@@ -10,7 +10,6 @@ from pathlib import Path
 from time import perf_counter
 from typing import Any, Protocol
 
-import matplotlib.pyplot as plt
 import mlflow
 import numpy as np
 import pandas as pd
@@ -28,6 +27,7 @@ from .data import (
     LABEL_ORDER,
     RANDOM_STATE,
 )
+from .plotting import plt
 
 LATENCY_WARMUP_RUNS = 50
 LATENCY_MEASUREMENTS = 1_000
