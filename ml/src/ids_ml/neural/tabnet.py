@@ -19,7 +19,7 @@ from ..data import (
     encode_labels,
     transformed_feature_count,
 )
-from ..specs import ExperimentSpec
+from ..experiment_specs import ExperimentSpec
 from .preprocessing import (
     EARLY_STOPPING_PATIENCE,
     INFERENCE_BATCH_SIZE,

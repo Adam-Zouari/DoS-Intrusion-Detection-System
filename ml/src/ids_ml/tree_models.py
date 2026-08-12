@@ -31,7 +31,7 @@ from .preprocessing import (
     make_one_hot_pipeline,
 )
 from .screening import AdapterMetadata, FitDetails
-from .specs import ExperimentSpec
+from .experiment_specs import ExperimentSpec
 
 
 def _as_float32(values: pd.DataFrame | np.ndarray) -> np.ndarray:

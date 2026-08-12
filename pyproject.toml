@@ -27,10 +27,10 @@ dependencies = [
 ]
 
 [project.scripts]
-ids-run-baselines = "ids_ml.workflows:baseline_main"
-ids-run-trees = "ids_ml.workflows:tree_main"
-ids-run-neural = "ids_ml.workflows:neural_main"
-ids-show-results = "ids_ml.workflows:show_results_main"
+ids-run-baselines = "ids_ml.screening_workflows:baseline_main"
+ids-run-trees = "ids_ml.screening_workflows:tree_main"
+ids-run-neural = "ids_ml.screening_workflows:neural_main"
+ids-show-results = "ids_ml.screening_workflows:show_results_main"
 ids-tune-trees = "ids_ml.tree_tuning.cli:tuning_main"
 
 [project.optional-dependencies]

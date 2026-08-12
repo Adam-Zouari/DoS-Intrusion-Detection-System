@@ -25,7 +25,7 @@ from .preprocessing import (
     make_one_hot_pipeline,
 )
 from .screening import AdapterMetadata, FitDetails
-from .specs import ExperimentSpec
+from .experiment_specs import ExperimentSpec
 
 
 def build_baseline_pipeline(

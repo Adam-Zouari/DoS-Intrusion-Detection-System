@@ -14,7 +14,7 @@ import pandas as pd
 from ..data import RANDOM_STATE, class_preserving_sample, decode_labels
 from ..evaluation import log_line_figure, log_table_artifact
 from ..screening import AdapterMetadata, FitDetails
-from ..specs import ExperimentSpec
+from ..experiment_specs import ExperimentSpec
 from .preprocessing import NeuralFitResult, make_inner_split
 from .rtdl import RTDLFlowClassifier
 from .tabnet import TabNetFlowClassifier

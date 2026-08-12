@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 
 from .data import COMPARISON_CONTRACT_FIELDS, find_project_root
-from .specs import (
+from .experiment_specs import (
     FEATURE_SETS,
     ROUND_EXPERIMENTS,
     WEIGHTING_MODES,

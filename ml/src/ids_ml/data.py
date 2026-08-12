@@ -12,7 +12,7 @@ import pyarrow.parquet as parquet
 from sklearn.model_selection import train_test_split
 from sklearn.utils.class_weight import compute_sample_weight
 
-from .specs import FEATURE_SETS
+from .experiment_specs import FEATURE_SETS
 
 RANDOM_STATE = 42
 TEST_SIZE = 0.20
@@ -159,6 +159,29 @@ def load_dataset_contract(project_root: Path | None = None) -> DatasetContract:
     return DatasetContract(dataset_sha256=sha256_file(dataset_path))
 
 
+def model_input_features_from_schema(
+    project_root: Path | None = None,
+) -> list[str]:
+    """Read the 71-feature input contract without loading any dataset rows."""
+
+    dataset_path = processed_dataset_path(project_root)
+    metadata = parquet.ParquetFile(dataset_path)
+    columns = metadata.schema_arrow.names
+    if "Label" not in columns:
+        raise AssertionError("The cleaned parquet schema does not contain Label.")
+    missing_identifiers = [column for column in IDENTIFIER_COLUMNS if column not in columns]
+    if missing_identifiers:
+        raise KeyError(f"Identifier columns are missing: {missing_identifiers}")
+    features = [
+        column
+        for column in columns
+        if column != "Label" and column not in IDENTIFIER_COLUMNS
+    ]
+    if len(features) != 71 or "Protocol" not in features:
+        raise AssertionError("The 71-feature model-input schema has changed.")
+    return features
+
+
 def index_fingerprint(index: pd.Index) -> str:
     values = np.asarray(index, dtype=np.int64)
     return hashlib.sha256(values.tobytes()).hexdigest()
@@ -224,6 +247,24 @@ def make_inner_split(
         stopping_positions=stopping_positions,
         training_fingerprint=index_fingerprint(training_index),
         stopping_fingerprint=index_fingerprint(stopping_index),
+    )
+
+
+def make_development_split(
+    data: ExperimentData, random_state: int
+) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
+    """Split the fixed 80% development partition without touching protected test rows."""
+
+    if random_state == RANDOM_STATE:
+        return data.X_fit, data.X_validation, data.y_fit, data.y_validation
+    X_development = pd.concat([data.X_fit, data.X_validation]).sort_index()
+    y_development = pd.concat([data.y_fit, data.y_validation]).sort_index()
+    return train_test_split(
+        X_development,
+        y_development,
+        test_size=VALIDATION_SIZE_WITHIN_TRAINING,
+        random_state=random_state,
+        stratify=y_development,
     )
 
 

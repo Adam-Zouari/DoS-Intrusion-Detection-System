@@ -1,4 +1,4 @@
-"""Command-line orchestration for reproducible screening experiments."""
+"""Command-line workflows for reproducible screening and result inspection."""
 
 from __future__ import annotations
 
@@ -27,7 +27,7 @@ from .reporting import (
     save_leaderboard,
 )
 from .screening import run_validation_experiment, smoke_fit_adapter
-from .specs import (
+from .experiment_specs import (
     FEATURE_SETS,
     ROUND_EXPERIMENTS,
     WEIGHTING_MODES,
