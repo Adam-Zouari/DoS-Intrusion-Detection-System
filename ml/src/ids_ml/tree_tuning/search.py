@@ -23,7 +23,7 @@ from ..evaluation import (
     log_table_artifact,
 )
 from ..tracking import setup_mlflow_experiment
-from .core import (
+from .training import (
     EARLY_STOPPING_PATIENCE,
     FEATURE_SET,
     LOG_LOSS_MIN_DELTA,

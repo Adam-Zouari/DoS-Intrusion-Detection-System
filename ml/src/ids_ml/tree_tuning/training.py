@@ -1,4 +1,4 @@
-"""Core preprocessing, search-space, training, and prediction contracts."""
+"""Shared boosting preprocessing, training, monitoring, and prediction contracts."""
 
 from __future__ import annotations
 

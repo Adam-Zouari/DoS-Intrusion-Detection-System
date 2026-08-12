@@ -20,23 +20,26 @@ All reusable experiment code lives under `src/ids_ml/`. Training commands and no
 | File | Role |
 |---|---|
 | `src/ids_ml/__init__.py` | Marks `ids_ml` as a Python package. It intentionally performs no imports or initialization, keeping package imports lightweight. |
-| `src/ids_ml/specs.py` | The single source of truth for experiment names, screening rounds, model families, feature sets, weighting modes, Protocol handling, candidate roles, and configuration keys. |
-| `src/ids_ml/data.py` | Locates and validates the cleaned parquet dataset; defines labels, feature exclusions, hashes, dataset and split contracts; recreates the fixed fit, validation, and protected-test partitions; and provides label encoding, deterministic inner splits, class-preserving sampling, and weight helpers. |
+| `src/ids_ml/experiment_specs.py` | The single source of truth for experiment names, screening rounds, model families, feature sets, weighting modes, Protocol handling, candidate roles, and configuration keys. |
+| `src/ids_ml/data.py` | Locates and validates the cleaned parquet dataset; defines labels, feature exclusions, hashes, dataset and split contracts; reads the input schema without loading rows; recreates the fixed fit, validation, and protected-test partitions; and provides label encoding, deterministic inner splits, class-preserving sampling, and weight helpers. |
 | `src/ids_ml/preprocessing.py` | Shared preprocessing for scikit-learn and tree pipelines: numeric transformation, fixed one-hot encoding of `Protocol`, transformed-schema validation, parameter extraction, and common fitted-pipeline cleanup. |
 | `src/ids_ml/evaluation.py` | Calculates the metrics defined in `ml/METRICS.md`, constructs per-class reports and confusion matrices, creates fixed timing inputs, measures complete-pipeline latency and throughput, and logs shared evaluation artifacts. |
-| `src/ids_ml/screening.py` | Implements the single MLflow validation lifecycle used by every model: create the run, log common metadata, fit, evaluate, time inference, log artifacts and diagnostics, handle cleanup, and return the result record. It also provides the common smoke-fit procedure. |
+| `src/ids_ml/screening.py` | Implements the single MLflow validation lifecycle used by every model and reusable development partition: create the run, log common metadata, fit, evaluate, optionally time inference, log artifacts and diagnostics, handle cleanup, and return the result record. It also provides the common smoke-fit procedure. |
 | `src/ids_ml/baseline_models.py` | Defines the Dummy, SGD, Decision Tree, Random Forest, Histogram Gradient Boosting, and scikit-learn MLP baseline configurations and adapts them to the shared screening lifecycle. |
 | `src/ids_ml/tree_models.py` | Defines ExtraTrees, XGBoost, and LightGBM screening configurations, their weighting behavior, target encoding, and tree feature-importance artifacts. |
 | `src/ids_ml/tree_tuning/__init__.py` | Marks the tree-tuning directory as a package and preserves the public `tuning_main` import. |
 | `src/ids_ml/tree_tuning/search_space.py` | Defines the named XGBoost and LightGBM hyperparameter ranges, conditional Optuna suggestions, and validation of every resolved configuration. |
-| `src/ids_ml/tree_tuning/core.py` | Defines the 71-feature tuning contract, shared preprocessing, boosting callbacks, combined early stopping, XGBoost/LightGBM fitting, and complete CPU prediction wrapper. |
+| `src/ids_ml/tree_tuning/training.py` | Defines the 71-feature tuning contract, shared preprocessing, boosting callbacks, combined early stopping, XGBoost/LightGBM fitting, and complete CPU prediction wrapper. |
 | `src/ids_ml/tree_tuning/search.py` | Owns Optuna study storage and resumption, successful-trial counting, TPE study creation, tuning-run MLflow metadata, iteration artifacts, and the 20-trial search lifecycle. |
 | `src/ids_ml/tree_tuning/verification.py` | Refits top trials, evaluates the outer validation split, logs confusion matrices and importances, measures CPU inference, and performs the three-development-split stability check. |
-| `src/ids_ml/tree_tuning/cli.py` | Implements temporary smoke validation, generated tuning reports, argument parsing, and the installed `ids-tune-trees` command. |
+| `src/ids_ml/tree_tuning/original_xgboost_comparison.py` | Compares the exact original balanced 71-feature XGBoost with the tuned XGBoost across matched development splits, reuses completed runs, and creates paired comparison reports. |
+| `src/ids_ml/tree_tuning/final_selection.py` | Finds compatible successful tuned XGBoost outer-validation runs, selects the highest full-precision macro F1, and freezes the selected run's exact parameters, iteration count, feature schema, and dataset/split contracts in JSON. |
+| `src/ids_ml/tree_tuning/final_evaluation.py` | Verifies the frozen JSON against its source MLflow run, owns the only protected-test prediction path, refits on the complete 80% development partition, serializes and reloads the CPU pipeline, logs the one-time test result, and prevents accidental test reuse. |
+| `src/ids_ml/tree_tuning/cli.py` | Implements temporary smoke validation, generated tuning reports, argument parsing, and all installed `ids-tune-trees` subcommands. |
 | `src/ids_ml/tree_tuning/README.md` | Explains the detailed ownership, dependency direction, and execution flow of every tree-tuning package file. |
 | `src/ids_ml/tracking.py` | Configures the local SQLite MLflow tracking URI and creates or selects experiments with the local artifact directory. |
 | `src/ids_ml/reporting.py` | Queries MLflow, normalizes current and legacy run records, selects compatible dataset/split contracts, removes duplicate configurations, builds coverage and leaderboard tables, compares feature and weighting choices, creates candidate shortlists, and downloads result artifacts. |
-| `src/ids_ml/workflows.py` | Implements the four screening and result-inspection commands. It parses filters, skips completed configurations, loads full data only when work remains, runs smoke checks, continues after isolated failures, invokes the shared screening lifecycle, and prints or saves leaderboards. |
+| `src/ids_ml/screening_workflows.py` | Implements the four screening and result-inspection commands. It parses filters, skips completed configurations, loads full data only when work remains, runs smoke checks, continues after isolated failures, invokes the shared screening lifecycle, and prints or saves leaderboards. |
 | `src/ids_ml/neural/__init__.py` | Marks the neural implementation directory as a subpackage without triggering PyTorch or model-library imports. |
 | `src/ids_ml/neural/preprocessing.py` | Owns neural-only shared behavior: reproducible seeds, numeric scaling, Protocol conversion, mini-batch loaders, balanced loss weights, training-device selection, fit-result records, and memory cleanup. It consumes the shared leakage-safe inner-split contract from `data.py`. |
 | `src/ids_ml/neural/rtdl.py` | Implements the RTDL MLP, ResNet, and FT-Transformer training, macro-F1 epoch selection, full-fit refitting, CPU inference, and prediction batching. |
@@ -118,7 +121,35 @@ ids-tune-trees verify
 ids-tune-trees report
 ```
 
+Optionally compare the exact original 200-tree XGBoost screening configuration with the selected tuned XGBoost across the same split seeds. Existing compatible runs are reused by default, so normally only missing original runs are trained:
+
+```powershell
+ids-tune-trees compare-original-xgboost
+ids-tune-trees compare-original-xgboost --rerun
+```
+
+The command writes the original runs, aggregate summaries, and seed-paired differences under `ml/reports/generated/`. `--rerun` intentionally repeats all three original-configuration fits. This comparison is diagnostic and does not participate in final selection.
+
 The search objective is inner-validation macro F1. Per-iteration training-monitor log loss, inner-validation log loss, macro F1, and iteration duration are stored as MLflow artifacts. The protected test partition is never scored by these commands.
+
+## Freeze and evaluate the final XGBoost
+
+Freeze the tuned XGBoost configuration with the highest macro F1 on the fixed outer-validation split:
+
+```powershell
+ids-tune-trees freeze-final
+```
+
+The command considers only successful XGBoost runs tagged as `outer_validation_top_trial` from the tuning-verification experiment. It rejects runs from another dataset or split, selects the maximum full-precision `macro_f1`, and writes `ml/final_model_spec.json` without loading dataset rows. The JSON records the source MLflow run, validation score, parameters, boosting iterations, feature/preprocessing schema, library versions, and dataset/split fingerprints. It is immediately checked against the source run.
+
+Review the frozen specification before crossing the final-test boundary. Then run the one-time final evaluation:
+
+```powershell
+ids-tune-trees evaluate-final
+ids-tune-trees final-report
+```
+
+`evaluate-final` checks that the JSON still matches its selected MLflow run, then refits it on the complete 80% development partition using CUDA for training and CPU for inference. It reloads and verifies the serialized pipeline before predicting the protected 20% test partition once. Metrics, diagnostics, the pipeline, and the native booster are logged under `cicids2017-final-test`. If any successful final run already uses that protected-test fingerprint, another evaluation is refused by default. `final-report` is read-only.
 
 ## Inspect results
 
@@ -152,4 +183,4 @@ The tuning and verification runs appear in the separate MLflow experiments `cici
 
 ## Test-set protection
 
-All current training commands are validation-only. They recreate and validate the protected test partition for fingerprint and support checks, but never predict or score it. Final model serialization and the one-time final-test evaluation remain later stages.
+Screening, tuning, verification, original-versus-tuned comparison, reporting, and `freeze-final` never predict or score the protected test partition. Only `evaluate-final` may do so after the best tuned outer-validation run has been frozen. Any successful final run for the protected-test fingerprint blocks another evaluation by default, and the observed result must not be used to restart tuning.

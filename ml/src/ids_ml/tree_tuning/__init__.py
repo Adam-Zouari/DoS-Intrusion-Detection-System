@@ -1,4 +1,4 @@
-"""Tree-tuning package for search, verification, reporting, and CLI orchestration."""
+"""Tree tuning, verification, freezing, final evaluation, and reporting."""
 
 from .cli import tuning_main
 

@@ -26,7 +26,9 @@ from ..data import (
 )
 from ..evaluation import TimingInputs
 from ..tracking import configure_tracking
-from .core import FEATURE_SET, TARGET_TRIALS, VERIFICATION_EXPERIMENT, prepare_matrices
+from .training import FEATURE_SET, TARGET_TRIALS, VERIFICATION_EXPERIMENT, prepare_matrices
+from .final_evaluation import evaluate_frozen_final_model, show_final_report
+from .final_selection import freeze_final_model
 from .search_space import MODEL_KEYS
 from .search import (
     complete_trial_count,
@@ -34,6 +36,7 @@ from .search import (
     run_search,
     run_search_trial,
 )
+from .original_xgboost_comparison import run_original_xgboost_comparison
 from .verification import (
     log_speed_for_candidate,
     run_verification,
@@ -268,19 +271,63 @@ def _tuning_parser() -> argparse.ArgumentParser:
     )
     _add_model_filter(verify)
 
+    comparison = subparsers.add_parser(
+        "compare-original-xgboost",
+        help="Compare the original and tuned XGBoost across three splits.",
+    )
+    comparison.add_argument(
+        "--rerun",
+        action="store_true",
+        help="Repeat original-configuration fits even when completed runs exist.",
+    )
+
     report = subparsers.add_parser(
         "report", help="Show saved Optuna progress and MLflow verification results."
     )
     _add_model_filter(report)
+
+    subparsers.add_parser(
+        "freeze-final",
+        help="Freeze the tuned XGBoost run with the best outer-validation macro F1.",
+    )
+    subparsers.add_parser(
+        "evaluate-final",
+        help="Refit the frozen XGBoost on 80%% and evaluate the protected test once.",
+    )
+    subparsers.add_parser(
+        "final-report",
+        help="Show the frozen recipe and final-test result without fitting.",
+    )
     return parser
 
 
 def tuning_main(argv: Sequence[str] | None = None) -> int:
     args = _tuning_parser().parse_args(argv)
-    model_keys = tuple(dict.fromkeys(args.models))
+    model_keys = tuple(dict.fromkeys(getattr(args, "models", ())))
     if args.command == "report":
         show_tuning_report(model_keys)
         return 0
+    if args.command == "freeze-final":
+        try:
+            freeze_final_model()
+            return 0
+        except (RuntimeError, ValueError) as error:
+            print(error)
+            return 1
+    if args.command == "final-report":
+        try:
+            show_final_report()
+            return 0
+        except (FileNotFoundError, ValueError) as error:
+            print(error)
+            return 1
+    if args.command == "evaluate-final":
+        try:
+            evaluate_frozen_final_model()
+            return 0
+        except (FileNotFoundError, RuntimeError, ValueError) as error:
+            print(error)
+            return 1
 
     contract = load_dataset_contract()
     data = load_experiment_data(contract=contract)
@@ -293,4 +340,6 @@ def tuning_main(argv: Sequence[str] | None = None) -> int:
         return 0 if run_search(data, model_keys, args.target_trials) else 1
     if args.command == "verify":
         return 0 if run_verification(data, model_keys) else 1
+    if args.command == "compare-original-xgboost":
+        return 0 if run_original_xgboost_comparison(data, rerun=args.rerun) else 1
     raise AssertionError(f"Unhandled command: {args.command}")

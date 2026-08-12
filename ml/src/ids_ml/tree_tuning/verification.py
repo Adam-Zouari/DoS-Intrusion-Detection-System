@@ -15,17 +15,15 @@ import numpy as np
 import pandas as pd
 import xgboost as xgb
 from optuna.trial import FrozenTrial
-from sklearn.model_selection import train_test_split
-
 from ..data import (
     LABEL_ORDER,
     RANDOM_STATE,
-    VALIDATION_SIZE_WITHIN_TRAINING,
     ExperimentData,
     balanced_sample_weights,
     encode_labels,
     find_project_root,
     index_fingerprint,
+    make_development_split,
 )
 from ..evaluation import (
     TimingInputs,
@@ -36,7 +34,7 @@ from ..evaluation import (
 )
 from ..tracking import setup_mlflow_experiment
 from ..tree_models import log_tree_importance
-from .core import (
+from .training import (
     FEATURE_SET,
     STABILITY_SEEDS,
     TOP_TRIALS,
@@ -65,7 +63,7 @@ class VerificationCandidate:
     predictor: TunedTreePredictor
 
 
-def _fit_fixed_predictor(
+def fit_fixed_predictor(
     model_key: str,
     params: dict[str, object],
     iteration_count: int,
@@ -125,7 +123,7 @@ def _fit_fixed_predictor(
     return predictor, float(training_seconds), transformed_names
 
 
-def _importance_values(
+def importance_values(
     predictor: TunedTreePredictor, transformed_names: np.ndarray
 ) -> np.ndarray:
     if predictor.booster is None:
@@ -190,7 +188,7 @@ def run_verification_fit(
     )
     run_name = f"verify__{model_key}__trial_{trial.number:04d}__seed_{split_seed}"
     with mlflow.start_run(run_name=run_name, tags=tags) as active_run:
-        predictor, training_seconds, transformed_names = _fit_fixed_predictor(
+        predictor, training_seconds, transformed_names = fit_fixed_predictor(
             model_key,
             params,
             iteration_count,
@@ -236,7 +234,7 @@ def run_verification_fit(
         )
         log_tree_importance(
             transformed_names,
-            _importance_values(predictor, transformed_names),
+            importance_values(predictor, transformed_names),
             tags["model_family"],
         )
         return VerificationCandidate(
@@ -248,22 +246,6 @@ def run_verification_fit(
             macro_f1=float(metrics["macro_f1"]),
             predictor=predictor,
         )
-
-
-def _development_split(
-    data: ExperimentData, seed: int
-) -> tuple[pd.DataFrame, pd.DataFrame, pd.Series, pd.Series]:
-    if seed == RANDOM_STATE:
-        return data.X_fit, data.X_validation, data.y_fit, data.y_validation
-    X_development = pd.concat([data.X_fit, data.X_validation]).sort_index()
-    y_development = pd.concat([data.y_fit, data.y_validation]).sort_index()
-    return train_test_split(
-        X_development,
-        y_development,
-        test_size=VALIDATION_SIZE_WITHIN_TRAINING,
-        random_state=seed,
-        stratify=y_development,
-    )
 
 
 def log_speed_for_candidate(
@@ -339,7 +321,7 @@ def run_verification(data: ExperimentData, model_keys: Sequence[str]) -> bool:
         )
         for seed in STABILITY_SEEDS[1:]:
             X_training, X_validation, y_training, y_validation = (
-                _development_split(data, seed)
+                make_development_split(data, seed)
             )
             repeated = run_verification_fit(
                 model_key,

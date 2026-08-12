@@ -42,7 +42,7 @@ Use the fixed set of dataset classes for $K$. If a precision, recall, or F1 deno
 
 Every class contributes equally, regardless of how many samples it contains. This makes macro F1 suitable for the highly imbalanced CIC-IDS-2017 dataset: a model cannot obtain a strong primary score merely by performing well on `BENIGN` and frequent attack classes. It must balance precision and recall across all classes.
 
-Macro F1 must be used to select and rank models. It should be calculated on the same fixed test set for every final model comparison.
+Macro F1 must be used to select and rank models on development validation splits. After one configuration is frozen, macro F1 is calculated once on the protected test set to report its final generalization result; that result must not be used to restart model selection.
 
 A rare class can make macro F1 unstable because its class-level score is based on very few examples. Macro F1 must therefore be read together with per-class scores and support. A poor score for a tiny class is important, but the small support means that its exact value has greater uncertainty.
 
