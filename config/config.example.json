@@ -1,5 +1,0 @@
-{
-  "daily_dir": "C:/path/to/CICFlowMeter/target/data/daily",
-  "analyzed_dir": "runtime-data/analyzed",
-  "model_path": "ml/models/ids_pipeline.joblib"
-}

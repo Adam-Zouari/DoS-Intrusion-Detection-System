@@ -270,6 +270,8 @@ def test_pyproject_exposes_the_expected_commands() -> None:
         "ids-run-neural": "ids_ml.screening_workflows:neural_main",
         "ids-show-results": "ids_ml.screening_workflows:show_results_main",
         "ids-tune-trees": "ids_ml.tree_tuning.cli:tuning_main",
+        "ids-serve": "ids_backend.app:serve_main",
+        "ids-generate-flows": "ids_tools.replay_flows:generator_main",
     }
 
 
@@ -281,4 +283,3 @@ def test_command_help_does_not_load_the_dataset(command_main) -> None:
     with pytest.raises(SystemExit) as exit_info:
         command_main(["--help"])
     assert exit_info.value.code == 0
-
