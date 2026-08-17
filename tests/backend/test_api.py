@@ -255,6 +255,17 @@ def test_model_path_is_not_exposed(tmp_path: Path) -> None:
         assert "model_path" not in model
         assert model["labels"] == LABEL_ORDER
         assert len(model["source_features"]) == 71
+        assert model["metadata_columns"] == [
+            "Flow ID",
+            "Src IP",
+            "Dst IP",
+            "Timestamp",
+        ]
+        assert model["expected_input_columns"] == [
+            *model["metadata_columns"],
+            *load_model_contract(project_root()).source_features,
+        ]
+        assert len(model["expected_input_columns"]) == 75
 
 
 def test_missing_model_produces_degraded_health_and_no_prediction(tmp_path: Path) -> None:

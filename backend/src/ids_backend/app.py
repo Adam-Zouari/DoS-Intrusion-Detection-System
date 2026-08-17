@@ -16,7 +16,12 @@ from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, StreamingResponse
 
-from .contracts import FlowContractError, load_model_contract, validate_flow_payload
+from .contracts import (
+    METADATA_COLUMNS,
+    FlowContractError,
+    load_model_contract,
+    validate_flow_payload,
+)
 from .predictor import FlowPredictor
 from .settings import ServingSettings
 from .storage import FlowStorage, SORT_EXPRESSIONS, iso_utc, utc_now
@@ -125,6 +130,8 @@ def create_app(
         information = resolved_predictor.information()
         information.pop("model_path", None)
         information["source"] = resolved_settings.source_name
+        information["metadata_columns"] = list(METADATA_COLUMNS)
+        information["expected_input_columns"] = list(contract.expected_columns)
         return information
 
     @application.post("/api/flows", status_code=201)
