@@ -19,6 +19,7 @@ ml/data/processed/*
 !ml/data/processed/.gitkeep
 ml/models/*
 !ml/models/.gitkeep
+!ml/models/xgboost_final_f6943dbff429.joblib
 ml/reports/figures/*
 !ml/reports/figures/.gitkeep
 ml/reports/generated/*
