@@ -1,19 +1,19 @@
 # Flow-level IDS application
 
-The application serves the frozen 15-class XGBoost pipeline and classifies one completed CICFlowMeter-compatible flow per request. It currently uses a cleaned CIC-IDS-2017 replay generator in place of a live CICFlowMeter producer.
+The application serves the frozen 15-class XGBoost pipeline and classifies one completed CICFlowMeter-compatible flow per request. It supports both reproducible CIC-IDS-2017 replay and direct completed-flow publishing from the bundled Windows CICFlowMeter integration.
 
 ## Architecture
 
 ```text
-Cleaned CIC-IDS-2017 Parquet
-    -> one-flow replay generator
-    -> FastAPI validation and XGBoost inference
-    -> SQLite persistence and server-side summaries
-    -> Server-Sent Events
-    -> React dashboard
+Synthetic CIC-IDS-2017 replay ---+
+                                 +-> POST /api/flows
+Live CICFlowMeter capture --------+       -> validation and XGBoost inference
+                                         -> SQLite persistence and summaries
+                                         -> Server-Sent Events
+                                         -> React dashboard
 ```
 
-The generator is a temporary producer. A CICFlowMeter integration can later send the same flat flow object to `POST /api/flows` without changing the backend or dashboard.
+Both producers send one completed flow at a time through the same strict backend contract. No CSV file exists between live capture and inference.
 
 ## Code ownership
 
@@ -21,6 +21,7 @@ The generator is a temporary producer. A CICFlowMeter integration can later send
 |---|---|
 | [`backend/src/ids_backend`](../backend/README.md) | API, inference, validation, persistence, querying, and live events |
 | [`tools/src/ids_tools`](../tools/README.md) | Synthetic completed-flow replay producer |
+| [`integrations/cicflowmeter`](../integrations/cicflowmeter/README.md) | Tested Windows live-capture distribution and launcher |
 | [`frontend`](../frontend/) | React dashboard and API client |
 | [`ml/src/ids_ml`](../ml/src/ids_ml/README.md) | Dataset processing, model experiments, tuning, and finalization only |
 
@@ -34,7 +35,7 @@ Each request contains the original flat CICFlowMeter row without `Label`:
 
 The backend creates its own database ID and reception timestamp. The sender does not need to create schema, event, or database identifiers.
 
-## Run locally
+## Start the application
 
 From the repository root:
 
@@ -52,7 +53,11 @@ npm install
 npm run dev
 ```
 
-Then replay completed flows from the cleaned dataset:
+Choose one of the two supported flow producers.
+
+### Synthetic replay
+
+Replay completed flows from the cleaned dataset:
 
 ```powershell
 ids-generate-flows --count 100 --interval-ms 500
@@ -68,6 +73,24 @@ ids-generate-flows --no-delay --count 10000
 
 The generator keeps the dataset `Label` private, sends each flow once, and prints the expected and predicted labels only in its own terminal. The backend and dashboard never receive ground truth.
 
+### Live CICFlowMeter
+
+Set the source name before starting the backend:
+
+```powershell
+$env:IDS_SOURCE_NAME = "Live CICFlowMeter"
+ids-serve
+```
+
+Then launch the committed Windows distribution:
+
+```powershell
+powershell.exe -NoProfile -ExecutionPolicy Bypass `
+    -File .\integrations\cicflowmeter\Start-CICFlowMeter-IDS.ps1
+```
+
+The launcher verifies `/api/model`, extracts the tested distribution under ignored `runtime-data/`, and starts CICFlowMeter with the configured backend endpoint. Select an active interface and begin capture. See the [live integration guide](../integrations/cicflowmeter/README.md) for Java, Npcap, permission, source-tag, and troubleshooting details.
+
 ## Runtime configuration
 
 | Variable | Default | Purpose |
@@ -75,7 +98,7 @@ The generator keeps the dataset `Label` private, sends each flow once, and print
 | `IDS_MODEL_PATH` | Frozen final artifact under `ml/models/` | Trusted local Joblib pipeline |
 | `IDS_DATABASE_PATH` | `runtime-data/ids.sqlite` | SQLite flow and prediction store |
 | `IDS_ALLOWED_ORIGINS` | Localhost and `127.0.0.1` on port 5173 | Comma-separated browser origins |
-| `IDS_SOURCE_NAME` | `CIC-IDS-2017 replay` | Source description shown by the dashboard |
+| `IDS_SOURCE_NAME` | `CIC-IDS-2017 replay` | Source description shown by the dashboard; use `Live CICFlowMeter` for capture |
 | `IDS_HOST` | `127.0.0.1` | API bind address |
 | `IDS_PORT` | `8000` | API port |
 
@@ -98,4 +121,4 @@ The Flow Explorer supports all/attack/benign scope, exact prediction label, sour
 
 ## Scope
 
-This is near-real-time completed-flow classification. It does not classify packets or unfinished flows, block traffic, or prove a network is secure. The current producer replays CIC-IDS-2017 rows; direct CICFlowMeter capture is the next integration boundary.
+This is near-real-time completed-flow classification. Live detection occurs after a bidirectional flow terminates or reaches an inactivity or maximum-duration timeout. The application does not classify unfinished flows, block traffic, or prove a network is secure.

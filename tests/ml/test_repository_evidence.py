@@ -23,6 +23,7 @@ def test_documented_local_links_resolve() -> None:
     documents = [
         PROJECT_ROOT / "README.md",
         PROJECT_ROOT / "docs" / "APPLICATION.md",
+        PROJECT_ROOT / "integrations" / "cicflowmeter" / "README.md",
         PROJECT_ROOT / "backend" / "README.md",
         PROJECT_ROOT / "tools" / "README.md",
         PROJECT_ROOT / "ml" / "README.md",

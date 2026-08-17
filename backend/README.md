@@ -20,4 +20,6 @@ Run it from the repository root after installing the project:
 ids-serve
 ```
 
-See [the application guide](../docs/APPLICATION.md) for the complete workflow and API.
+`GET /api/model` exposes the four metadata columns and complete expected input-column order so live producers can validate compatibility before sending flows.
+
+See [the application guide](../docs/APPLICATION.md) for the complete workflow and API, or the [CICFlowMeter integration guide](../integrations/cicflowmeter/README.md) for live capture.

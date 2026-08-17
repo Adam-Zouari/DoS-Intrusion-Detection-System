@@ -16,6 +16,8 @@ The backend tests under `tests/backend/` are data-free and use a fake predictor:
 
 `tests/tools/test_replay_flows.py` confirms the synthetic replay utility keeps ground truth private.
 
+`tests/test_cicflowmeter_bundle.py` verifies that the committed Windows archive is the exact tested build, contains its launcher, native libraries, license and updated logging runtime, and remains aligned with the integration documentation.
+
 Run all tests from the repository root:
 
 ```powershell

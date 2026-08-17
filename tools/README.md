@@ -12,4 +12,4 @@ Run the replay producer after starting the backend:
 ids-generate-flows --count 100 --interval-ms 500
 ```
 
-This producer is the temporary stand-in for a CICFlowMeter integration.
+This producer remains the reproducible, data-driven demonstration path. The [bundled CICFlowMeter integration](../integrations/cicflowmeter/README.md) provides the corresponding live-capture path; both send one completed flow at a time through the same backend contract.
